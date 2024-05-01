@@ -25,6 +25,7 @@ extern bool b_APmode;
 extern int b_16Bit;
 extern int b_failover;
 extern int b_silent;
+extern int b_reverseArray;
 extern bool identify;
 extern bool diag;
 extern String DEV_NAME;
@@ -55,6 +56,7 @@ const int DEV_NAME_EEPROM_ADDR = B_16BIT_EEPROM_ADDR + 64;
 const int WIFI_ATTEMPT = 13;
 const int B_FAILOVER_EEPROM_ADDR = WIFI_ATTEMPT + 2;
 const int B_SILENT_EEPROM_ADDR = B_FAILOVER_EEPROM_ADDR + 2;
+const int B_REVERSE_ARRAY_EEPROM_ADDR = B_FAILOVER_EEPROM_ADDR + 2;
 
 
 

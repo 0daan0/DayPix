@@ -15,7 +15,11 @@ void initializeEEPROM() {
   byte marker = EEPROM.read(INIT_MARKER_ADDR);
   // Check if the read value matches the marker value
   if (marker != INIT_MARKER) {
+    Serial.println("EEPROM: Flash not initialized, initializing flash...");
     // EEPROM is not initialized, write the marker value
+     for (int i = 0; i < EEPROM_SIZE; i++) {
+      EEPROM.write(i, 0x00); // Write 0xFF to each address in the EEPROM
+      }
     EEPROM.write(INIT_MARKER_ADDR, INIT_MARKER);
     // Commit the changes to EEPROM
     EEPROM.commit();

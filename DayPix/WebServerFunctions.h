@@ -10,6 +10,7 @@ extern AsyncWebServer server;
 extern ledDriver led; 
 
 void setupWebServer(); 
+void handleLedControl(AsyncWebServerRequest* request);
 void handleRoot(AsyncWebServerRequest* request);
 void handleSignalStrength(AsyncWebServerRequest* request);
 void handleSave(AsyncWebServerRequest* request);

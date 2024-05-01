@@ -26,10 +26,59 @@ void setupWebServer() {
   server.on("/identify", HTTP_POST, handleIdentify);
   server.on("/", HTTP_GET, handleRoot);
   server.on("/save", HTTP_POST, handleSave);
+  server.on("/ledcontrol", HTTP_POST, handleLedControl);
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest* request) {
     request->send(200, "text/html", "<h1>Updating...</h1>");
   }, handleUpdate);
-  
+
+
+server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
+    // HTML for the LED control page
+    String html = "<html><head><title>LED Control</title></head><body>";
+    html += "<h1>LED Control</h1>";
+    html += "<form id='ledForm'>";
+    html += "Red: <input type='range' id='redSlider' name='red' min='0' max='255'><br>";
+    html += "Green: <input type='range' id='greenSlider' name='green' min='0' max='255'><br>";
+    html += "Blue: <input type='range' id='blueSlider' name='blue' min='0' max='255'><br>";
+    html += "</form></body>";
+    // JavaScript for handling slider changes and sending Fetch API requests
+    html += "<script>";
+    html += "const redSlider = document.getElementById('redSlider');";
+    html += "const greenSlider = document.getElementById('greenSlider');";
+    html += "const blueSlider = document.getElementById('blueSlider');";
+    html += "const ledForm = document.getElementById('ledForm');";
+    html += "redSlider.addEventListener('input', updateLed);";
+    html += "greenSlider.addEventListener('input', updateLed);";
+    html += "blueSlider.addEventListener('input', updateLed);";
+    html += "function updateLed() {";
+    html += "const red = redSlider.value;";
+    html += "const green = greenSlider.value;";
+    html += "const blue = blueSlider.value;";
+    html += "fetch('/ledcontrol', {";
+    html += "method: 'POST',";
+    html += "headers: {";
+    html += "'Content-Type': 'x-www-form-urlencoded'";
+    html += "},";
+    html += "body: 'red=' + encodeURIComponent(red) + '&green=' + encodeURIComponent(green) + '&blue=' + encodeURIComponent(blue)";
+    html += "})";
+    html += ".then(response => {";
+    html += "if (response.ok) {";
+    html += "console.log('LEDs updated successfully');";
+    html += "} else {";
+    html += "console.error('Failed to update LEDs');";
+    html += "}";
+    html += "})";
+    html += ".catch(error => {";
+    html += "console.error('Error:', error);";
+    html += "});";
+    html += "}";
+    html += "</script>";
+    html += "</html>";
+    request->send(200, "text/html", html);
+});
+
+
+
 
   server.begin();
 }
@@ -41,6 +90,29 @@ void loginUser(AsyncWebServerRequest* request)
     if (!request->authenticate(www_username, www_password)) {
       return request->requestAuthentication();
     }
+  }
+}
+
+void handleLedControl(AsyncWebServerRequest* request) {
+ 
+           // Check if there is a request body
+    // Check if the request has a body
+  if (request->hasParam("plain", true)) {
+    String body = request->getParam("plain", true)->value();
+
+    // Parse the body to extract red, green, and blue values
+    int red, green, blue;
+    sscanf(body.c_str(), "red=%d&green=%d&blue=%d", &red, &green, &blue);
+    led.setLEDColor(red, green, blue);
+    // Here you can use the RGB values to control your LEDs or perform any desired action
+    // For example, you could use these values to adjust the brightness of RGB LEDs
+    Serial.printf("Received RGB values - Red: %d, Green: %d, Blue: %d\n", red, green, blue);
+
+    // Respond with a success message
+    request->send(200, "text/plain", "LEDs updated successfully");
+  } else {
+    // If the request body is missing, respond with an error message
+    request->send(400, "text/plain", "Missing request body");
   }
 }
 
@@ -210,6 +282,11 @@ html += "</style></head><body>";
   html += "<p>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</p>";
   html += "Silent mode : <input type='checkbox' name='b_silent' " + String(b_silent ? "checked" : "") + " value='" + String(b_silent) + "'><br>";
   html += "<p>In silent mode no connection status is given on the LED outputs</p>";
+  html += "Reverse DMX addresses : <input type='checkbox' name='b_reverseArray' " + String(b_reverseArray ? "checked" : "") + " value='" + String(b_reverseArray) + "'><br>";
+  html += "<p>Reverse DMX addresses will address the pixels in reverse order</p>";
+  html += "<p>Normal mode: Lowest address = first LED outwards from the controller</p>";
+  html += "<p>Reverse mode: Highest address = first LED outwards from the controller</p>";
+  html += "<p>NOTE: Default color space is BGR in reverse order this will be RGB</p>";
   // Add the Identify button with spacing
   html += "<form id='saveForm' action='/save' method='post'>";
   html += "<input type='submit' value='Save' onclick='saveClicked()' style='margin-bottom: 10px; margin-top: 10px;'>";
@@ -341,6 +418,8 @@ void handleSave(AsyncWebServerRequest* request) {
   b_failover = b_failover.toInt();
     String b_silent = request->hasArg("b_silent") ? "1" : "0";
   b_silent = b_silent.toInt();
+     String b_reverseArray = request->hasArg("b_reverseArray") ? "1" : "0";
+  b_reverseArray = b_reverseArray.toInt();
   String devicename = request->arg("devicename");
   String universe_start = request->arg("universe_start");
   String universe_end = request->arg("universe_end");
@@ -357,9 +436,11 @@ void handleSave(AsyncWebServerRequest* request) {
   storeString(B_16BIT_EEPROM_ADDR, b_16Bit);
   storeString(B_FAILOVER_EEPROM_ADDR, b_failover);
   storeString(B_SILENT_EEPROM_ADDR, b_silent);
+  storeString(B_REVERSE_ARRAY_EEPROM_ADDR, b_reverseArray);
   storeString(DEV_NAME_EEPROM_ADDR, devicename);
   storeString(UNIVERSE_START_EEPROM_ADDR, universe_start);
   storeString(UNIVERSE_END_EEPROM_ADDR, universe_end);
+  storeString(B_REVERSE_ARRAY_EEPROM_ADDR, b_reverseArray);
 
   Serial.println("Received values from the web interface:");
   Serial.print("SSID: ");

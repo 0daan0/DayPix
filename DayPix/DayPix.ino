@@ -34,6 +34,10 @@ uint16_t bsize2;
 int cb1calls=0;
 int cb2calls=0;
 // Artnet Callback
+
+
+
+
 void callback(const uint8_t* data, const uint16_t size) {
     
    //bdata = data;
@@ -42,8 +46,18 @@ void callback(const uint8_t* data, const uint16_t size) {
       // The recvUniverse does not contain artnet.universe(), so add it
       recvUniverse += "U" + String(artnet.universe()) + "U";
     }
-
   led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
+  /*
+  if (!b_reverseArray == 1) {
+      uint8_t reversedData[size];
+      memcpy(reversedData, data, size); // Make a copy of original data
+      reverseArray(reversedData, size); // Reverse the copied array
+
+      led.writePixelBuffer(reversedData, size, NrOfLeds, DmxAddr, 0);
+  } else {
+      led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
+  }
+  */
   //led.showBuffer();
 
   //Serial.println(artnet.universe());
@@ -62,8 +76,17 @@ void callback1(const uint8_t* data, const uint16_t size) {
       recvUniverse += "U" + String(artnet.universe()) + "U";
   }
   led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
+  /*
+  if (!b_reverseArray == 1) {
+      uint8_t reversedData[size];
+      memcpy(reversedData, data, size); // Make a copy of original data
+      reverseArray(reversedData, size); // Reverse the copied array
 
-
+      led.writePixelBuffer(reversedData, size, NrOfLeds, DmxAddr, 0);
+  } else {
+      led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
+  }
+*/
   //Serial.println(artnet.universe());
   //Serial.println(artnet.universe15bit());
 }
@@ -76,6 +99,17 @@ void callback2(const uint8_t* data, const uint16_t size) {
       recvUniverse += "U" + String(artnet.universe()) + "U";
   }
   led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
+  /*
+   if (!b_reverseArray == 1) {
+      uint8_t reversedData[size];
+      memcpy(reversedData, data, size); // Make a copy of original data
+      reverseArray(reversedData, size); // Reverse the copied array
+
+      led.writePixelBufferPort2(reversedData, size, NrOfLeds, DmxAddr, 0);
+  } else {
+      led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
+  }
+ */
   //led.showBufferP2();
 }
 void callback3(const uint8_t* data, const uint16_t size) {
@@ -87,7 +121,17 @@ void callback3(const uint8_t* data, const uint16_t size) {
       recvUniverse += "U" + String(artnet.universe()) + "U";
   }
   led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
+  /*
+  if (!b_reverseArray == 1) {
+      uint8_t reversedData[size];
+      memcpy(reversedData, data, size); // Make a copy of original data
+      reverseArray(reversedData, size); // Reverse the copied array
 
+      led.writePixelBufferPort2(reversedData, size, NrOfLeds, DmxAddr, 0);
+  } else {
+      led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
+  }
+  */
 }
 
 // Task to get Artnet data frame and write to pixel buffer
@@ -180,6 +224,7 @@ void setup() {
   String storedDeviceName = getStoredString(DEV_NAME_EEPROM_ADDR);
   int storedUniverseStart = getStoredString(UNIVERSE_START_EEPROM_ADDR).toInt();
   int storedUniverseEnd = getStoredString(UNIVERSE_END_EEPROM_ADDR).toInt();
+  int storedReverseArray = getStoredString(B_REVERSE_ARRAY_EEPROM_ADDR).toInt();
   // Set configuration parameters
   universe1 = storedUniverse.toInt();
   NrOfLeds = storedNrofLEDS.toInt();
@@ -187,6 +232,7 @@ void setup() {
   b_16Bit = storedB16Bit.toInt(); 
   b_failover = storedBfailover.toInt(); // Add this line
   b_silent = storedBsilent.toInt();
+  b_reverseArray = storedReverseArray;
 
 
   // Set device name based on the last two digits of the MAC address if not been set by user
@@ -243,7 +289,7 @@ void setup() {
       while (WiFi.status() != WL_CONNECTED && attempts < WIFI_ATTEMPT) {
         if (b_silent == 0)
         {
-          led.blink(attempts);
+          led.blink(1);
         }
         delay(1000);
         Serial.println("Connecting to WiFi...");

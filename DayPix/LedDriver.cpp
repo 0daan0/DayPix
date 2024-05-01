@@ -94,6 +94,20 @@ void ledDriver::_16bTest(){
     digitalWrite(latchPin, HIGH);
   }
 }
+void reverseArray(uint8_t* array, const uint16_t size) {
+    uint16_t start = 0;
+    uint16_t end = size - 1;
+    while (start < end) {
+        // Swap elements at start and end indices
+        uint8_t temp = array[start];
+        array[start] = array[end];
+        array[end] = temp;
+        
+        // Move to the next pair of elements
+        start++;
+        end--;
+    }
+}
 
   // Write pixelbuffer data=DMX data, length=DMX data lenght, limit=number of leds, start=start addres (DMX addres), ofset=the amount of leds it needs to blank before writing data
   void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset) {
@@ -102,17 +116,8 @@ void ledDriver::_16bTest(){
     uint16_t limit = b_16Bit ? nrOfleds * 6 : nrOfleds * 3;
     // set limit times 3 since each led has 3 values RGB, also add start address to the limit since we shift that amount of addresses.
     uint16_t end = limit + start;
-    if (ledOfset > 0) {
-      digitalWrite(latchPin, LOW);
-      int ofset =  b_16Bit ? ledOfset * 6 : ledOfset * 3;
-      for (int j = 0; j < ofset; ++j) {
-        // just send data 0 to blank the channels
-        sendData(0, dataPin, clockPin);
-      }
-      digitalWrite(latchPin, HIGH);
-    }
- 
-    digitalWrite(latchPin, LOW);
+  
+    /*
     for (int i = start; i < std::min(length, end); i++) {
       if (b_16Bit){
         int coars = data[i];
@@ -125,11 +130,112 @@ void ledDriver::_16bTest(){
       else {
         sendData(data[i], dataPin, clockPin);
       }
-     
+      */
+      digitalWrite(latchPin, LOW);
+      if (b_reverseArray == 0) {
+          for (int i = std::min(length, end) - 1; i >= start; i--) {
+              if (b_16Bit){
+                  int coars = data[i];
+                  int fine = data[i-1];
+                  // update the counter we took another value 
+                  i = i-1;
+                  int value = (coars * 256) + fine;
+                  sendData16Bit(value, dataPin, clockPin);
+              } else {
+                  sendData(data[i], dataPin, clockPin);
+              }
+          }
+      } else {
+          for (int i = start; i < std::min(length, end); i++) {
+              if (b_16Bit){
+                  int coars = data[i];
+                  int fine = data[i+1];
+                  // update the counter we took another value 
+                  i = i+1;
+                  int value = (coars * 256) + fine;
+                  sendData16Bit(value, dataPin, clockPin);
+              } else {
+                  sendData(data[i], dataPin, clockPin);
+              }
+          }
+      }
+      if (ledOfset > 0) {
+      digitalWrite(latchPin, LOW);
+      int ofset =  b_16Bit ? ledOfset * 6 : ledOfset * 3;
+      for (int j = 0; j < ofset; ++j) {
+        // just send data 0 to blank the channels
+        sendData(0, dataPin, clockPin);
+      }
+      digitalWrite(latchPin, HIGH);
     }
+ 
+    
+     
+    
     digitalWrite(latchPin, HIGH);
   }
 
+void ledDriver::reverseArray(uint8_t* array, const uint16_t size) {
+    uint16_t start = 0;
+    uint16_t end = size - 1;
+    while (start < end) {
+        // Swap elements at start and end indices
+        uint8_t temp = array[start];
+        array[start] = array[end];
+        array[end] = temp;
+        
+        // Move to the next pair of elements
+        start++;
+        end--;
+    }
+}
+/*
+void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset) {
+    // reset wdt
+    rstWdt(); 
+    uint16_t limit = b_16Bit ? nrOfleds * 6 : nrOfleds * 3;
+    // set limit times 3 since each led has 3 values RGB, also add start address to the limit since we shift that amount of addresses.
+    uint16_t end = limit + start;
+
+    // Check if the length of the data array needs to be cut with the end index
+    uint16_t dataLength = std::min(length, end);
+    const uint8_t* processedData = data; // Initialize processedData with the original data
+
+    // If b_reverseArray is true, create a copy of the processed data and reverse it
+    if (b_reverseArray == 0) {
+        uint8_t reversedData[length];
+        memcpy(reversedData, processedData, dataLength); // Make a copy of the processed data
+        reverseArray(reversedData, dataLength); // Reverse the copied array
+        processedData = reversedData; // Update processedData pointer to point to the reversedData
+    }
+
+    if (ledOfset > 0) {
+        digitalWrite(latchPin, LOW);
+        int offset =  b_16Bit ? ledOfset * 6 : ledOfset * 3;
+        for (int j = 0; j < offset; ++j) {
+            // just send data 0 to blank the channels
+            sendData(0, dataPin, clockPin);
+        }
+        digitalWrite(latchPin, HIGH);
+    }
+ 
+    digitalWrite(latchPin, LOW);
+    for (int i = start; i < dataLength; i++) {
+        if (b_16Bit){
+            int coars = processedData[i];
+            int fine = processedData[i+1];
+            // update the counter we took another value 
+            i = i+1;
+            int value = (coars * 256) + fine;
+            sendData16Bit(value, dataPin, clockPin);
+        }
+        else {
+            sendData(processedData[i], dataPin, clockPin);
+        }
+    }
+    digitalWrite(latchPin, HIGH);
+}
+*/
   void ledDriver::showBuffer(){
 
     digitalWrite(latchPin, HIGH);
@@ -142,15 +248,105 @@ void ledDriver::_16bTest(){
     digitalWrite(latchPin2, LOW);
     //Serial.println("Latch");
   }
+  /*
+void ledDriver::writePixelBufferPort2(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset) {
+    // reset wdt
+    rstWdt(); 
+    uint16_t limit = b_16Bit ? nrOfleds * 6 : nrOfleds * 3;
+    // set limit times 3 since each led has 3 values RGB, also add start address to the limit since we shift that amount of addresses.
+    uint16_t end = limit + start;
 
-   
-   // Write pixelbuffer data=DMX data, length=DMX data lenght, limit=number of leds, start=start addres (DMX addres), ofset=the amount of leds it needs to blank before writing data
+    // Check if the length of the data array needs to be cut with the end index
+    uint16_t dataLength = std::min(length, end);
+    const uint8_t* processedData = data; // Initialize processedData with the original data
+
+    // If b_reverseArray is true, create a copy of the processed data and reverse it
+    if (b_reverseArray == 0) {
+        uint8_t reversedData[length];
+        memcpy(reversedData, processedData, dataLength); // Make a copy of the processed data
+        reverseArray(reversedData, dataLength); // Reverse the copied array
+        processedData = reversedData; // Update processedData pointer to point to the reversedData
+    }
+
+    if (ledOfset > 0) {
+        digitalWrite(latchPin2, LOW);
+        int offset =  b_16Bit ? ledOfset * 6 : ledOfset * 3;
+        for (int j = 0; j < offset; ++j) {
+            // just send data 0 to blank the channels
+            sendData(0, dataPin2, clockPin2);
+        }
+        digitalWrite(latchPin2, HIGH);
+    }
+ 
+    digitalWrite(latchPin2, LOW);
+    for (int i = start; i < dataLength; i++) {
+        if (b_16Bit){
+            int coars = processedData[i];
+            int fine = processedData[i+1];
+            // update the counter we took another value 
+            i = i+1;
+            int value = (coars * 256) + fine;
+            sendData16Bit(value, dataPin2, clockPin2);
+        }
+        else {
+            sendData(processedData[i], dataPin2, clockPin2);
+        }
+    }
+    digitalWrite(latchPin2, HIGH);
+    */
+
+  
+  // Write pixelbuffer data=DMX data, length=DMX data lenght, limit=number of leds, start=start addres (DMX addres), ofset=the amount of leds it needs to blank before writing data
   void ledDriver::writePixelBufferPort2(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset) {
     // reset wdt
     rstWdt(); 
     uint16_t limit = b_16Bit ? nrOfleds * 6 : nrOfleds * 3;
     // set limit times 3 since each led has 3 values RGB, also add start address to the limit since we shift that amount of addresses.
     uint16_t end = limit + start;
+ 
+    digitalWrite(latchPin2, LOW);
+    /*
+    for (int i = start; i < std::min(length, end); i++) {
+      if (b_16Bit){
+        int coars = data[i];
+        int fine = data[i+1];
+        // update the counter we took another value 
+        i = i+1;
+        int value = (coars * 256) + fine;
+        sendData16Bit(value, dataPin, clockPin);
+      }
+      else {
+        sendData(data[i], dataPin, clockPin);
+      }
+      */
+      if (b_reverseArray == 0) {
+          for (int i = std::min(length, end) - 1; i >= start; i--) {
+              if (b_16Bit){
+                  int coars = data[i];
+                  int fine = data[i-1];
+                  // update the counter we took another value 
+                  i = i-1;
+                  int value = (coars * 256) + fine;
+                  sendData16Bit(value, dataPin2, clockPin2);
+              } else {
+                  sendData(data[i], dataPin2, clockPin2);
+              }
+          }
+      } else {
+          for (int i = start; i < std::min(length, end); i++) {
+              if (b_16Bit){
+                  int coars = data[i];
+                  int fine = data[i+1];
+                  // update the counter we took another value 
+                  i = i+1;
+                  int value = (coars * 256) + fine;
+                  sendData16Bit(value, dataPin2, clockPin2);
+              } else {
+                  sendData(data[i], dataPin2, clockPin2);
+              }
+          }
+      }
+
     if (ledOfset > 0) {
       digitalWrite(latchPin2, LOW);
       int ofset =  b_16Bit ? ledOfset * 6 : ledOfset * 3;
@@ -160,22 +356,8 @@ void ledDriver::_16bTest(){
       }
       digitalWrite(latchPin2, HIGH);
     }
- 
-    digitalWrite(latchPin2, LOW);
-    for (int i = start; i < std::min(length, end); i++) {
-        if (b_16Bit){
-          int coars = data[i];
-          int fine = data[i+1];
-          // update the counter we took another value 
-          i = i+1;
-          int value = (coars * 256) + fine;
-          sendData16Bit(value, dataPin2, clockPin2);
-    }
-    else {
-       sendData(data[i], dataPin2, clockPin2);
-    }
      
-    }
+    
     digitalWrite(latchPin2, HIGH);
   }
 
@@ -287,7 +469,16 @@ void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, con
     sendData(255, dataPin, clockPin);
     digitalWrite(latchPin, HIGH);
   }
-
+  void ledDriver::setLEDColor(int r, int g, int b)
+  {
+    digitalWrite(latchPin, LOW);
+    for (int i = 0; i < NrOfLeds ; ++i) {
+      sendData(r, dataPin, clockPin);
+      sendData(g, dataPin, clockPin);
+      sendData(b, dataPin, clockPin);
+    }
+    digitalWrite(latchPin, HIGH);
+  }
   void ledDriver::rgbEffect(void* parameter) {
     int number = reinterpret_cast<int>(parameter);
     // test led strip
@@ -351,11 +542,9 @@ void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, con
   }
   void ledDriver::blink(int nrs){
     for (int i = 0; i < 1; i++){
-      blankLEDS(NumberOfLeds - nrs);
+      blankLEDS(179);
       delay(1000);
-      digitalWrite(latchPin, LOW);
-      sendData(255, dataPin, clockPin);
-      digitalWrite(latchPin, HIGH);
+   
       digitalWrite(latchPin, LOW);
       int nrBlank = (NumberOfLeds - 1) * 3;
       for (int j = 0; j < nrBlank; ++j) {

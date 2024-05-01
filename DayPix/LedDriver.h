@@ -4,8 +4,8 @@
 
 #include <Arduino.h>
 // Define macros for different hardware platforms
-#define ESP32C3
-//#define ESP_ETH01
+//#define ESP32C3
+#define ESP_ETH01
 
 class ledDriver {
 public:
@@ -14,6 +14,7 @@ public:
   ledDriver();
   
   void initialize(int nrLeds, int DmxAddr);
+  void reverseArray(uint8_t* array, const uint16_t size);
   void sendData(uint8_t value, int dataPin, int clockPin);
   void sendDataFast(uint8_t value, int dataPin, int clockPin);
   void sendData16Bit(uint16_t value, int dataPin, int clockPin);
@@ -21,6 +22,7 @@ public:
   void writePixelBufferFull(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset);
   void writePixelBufferPort2(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset);
   void writePixelBuffer_(const uint8_t* data, const uint16_t length, const uint16_t limit, const uint16_t start);
+  void setLEDColor(int r, int g, int b);
   void showBuffer();
   void showBufferP2();
   void blankLEDS(int nrToblank);
@@ -35,13 +37,13 @@ public:
 private:
 #ifdef ESP32C3
     // Pins for ESP32C3
-    int latchPin = D0;
-    int dataPin = D1;
-    int clockPin = D2;
+    int latchPin = A0;
+    int dataPin = A1;
+    int clockPin = A2;
 
-    int latchPin2 = D3;
-    int dataPin2 = D4;
-    int clockPin2 = D5;
+    int latchPin2 = A3;
+    int dataPin2 = A4;
+    int clockPin2 = A5;
 
 #elif defined(ESP_ETH01)
     // Pins for ESP_ETH01
