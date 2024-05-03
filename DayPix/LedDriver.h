@@ -68,7 +68,7 @@ public:
     int latchPin2 = IO33;
     int dataPin2 = IO4;
     int clockPin2 = IO2;
-
+#define ETH_CAP;
     bool ethCap = true;
     const char* hwVersion = "DP2P.WL.ETH.LX6";
     // Add pins for ESP_ETH01 if needed

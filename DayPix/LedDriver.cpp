@@ -116,21 +116,7 @@ void reverseArray(uint8_t* array, const uint16_t size) {
     uint16_t limit = b_16Bit ? nrOfleds * 6 : nrOfleds * 3;
     // set limit times 3 since each led has 3 values RGB, also add start address to the limit since we shift that amount of addresses.
     uint16_t end = limit + start;
-  
-    /*
-    for (int i = start; i < std::min(length, end); i++) {
-      if (b_16Bit){
-        int coars = data[i];
-        int fine = data[i+1];
-        // update the counter we took another value 
-        i = i+1;
-        int value = (coars * 256) + fine;
-        sendData16Bit(value, dataPin, clockPin);
-      }
-      else {
-        sendData(data[i], dataPin, clockPin);
-      }
-      */
+
       digitalWrite(latchPin, LOW);
       if (b_reverseArray == 0) {
           for (int i = std::min(length, end) - 1; i >= start; i--) {
@@ -141,8 +127,12 @@ void reverseArray(uint8_t* array, const uint16_t size) {
                   i = i-1;
                   int value = (coars * 256) + fine;
                   sendData16Bit(value, dataPin, clockPin);
-              } else {
-                  sendData(data[i], dataPin, clockPin);
+              } else {     
+                  // re-order RGB                      
+                  //sendData(data[i+2], dataPin, clockPin); //R
+                  //sendData(data[i+1], dataPin, clockPin); //G
+                  sendData(data[i], dataPin, clockPin);   //B
+                  //i = i +2;
               }
           }
       } else {
@@ -155,7 +145,7 @@ void reverseArray(uint8_t* array, const uint16_t size) {
                   int value = (coars * 256) + fine;
                   sendData16Bit(value, dataPin, clockPin);
               } else {
-                  sendData(data[i], dataPin, clockPin);
+                 sendData(data[i], dataPin, clockPin);            
               }
           }
       }

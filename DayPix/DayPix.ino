@@ -1,8 +1,11 @@
 #include <WiFi.h>
 #include <ESPAsyncWebSrv.h>
 #include <EEPROM.h>
-//#include <ArtnetWiFi.h>
+#ifdef ETH_CAP
 #include <ArtnetETH.h>
+#else
+#include <ArtnetWiFi.h>
+#endif
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "rgb_effects.h"
@@ -19,7 +22,11 @@
 //#define artnet ArtnetWiFiReceiver
 //#define artnet ArtnetReceiver
 //ArtnetReceiver artnet;
+#ifdef ETH_CAP
 ArtnetReceiver artnet;
+#else
+ArtnetWiFiReceiver artnet;
+#endif
 
 ledDriver led;
 RGBEffects effect;
@@ -38,58 +45,22 @@ int cb2calls=0;
 
 
 
-void callback(const uint8_t* data, const uint16_t size) {
-    
-   //bdata = data;
-   //bsize = size;
+void callback(const uint8_t* data, const uint16_t size) {    
   if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
       // The recvUniverse does not contain artnet.universe(), so add it
       recvUniverse += "U" + String(artnet.universe()) + "U";
     }
   led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
-  /*
-  if (!b_reverseArray == 1) {
-      uint8_t reversedData[size];
-      memcpy(reversedData, data, size); // Make a copy of original data
-      reverseArray(reversedData, size); // Reverse the copied array
-
-      led.writePixelBuffer(reversedData, size, NrOfLeds, DmxAddr, 0);
-  } else {
-      led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
-  }
-  */
-  //led.showBuffer();
-
-  //Serial.println(artnet.universe());
-  //Serial.println(artnet.universe15bit());
 }
+
 void callback1(const uint8_t* data, const uint16_t size) {
-    
-   //bdata = data;
-   //bsize = size;
-  //if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-      // The recvUniverse does not contain artnet.universe(), so add it
-  //    recvUniverse += "U" + String(artnet.universe()) + "U";
- // }
  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
       // The recvUniverse does not contain artnet.universe(), so add it
       recvUniverse += "U" + String(artnet.universe()) + "U";
   }
   led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
-  /*
-  if (!b_reverseArray == 1) {
-      uint8_t reversedData[size];
-      memcpy(reversedData, data, size); // Make a copy of original data
-      reverseArray(reversedData, size); // Reverse the copied array
-
-      led.writePixelBuffer(reversedData, size, NrOfLeds, DmxAddr, 0);
-  } else {
-      led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
-  }
-*/
-  //Serial.println(artnet.universe());
-  //Serial.println(artnet.universe15bit());
 }
+
 void callback2(const uint8_t* data, const uint16_t size) {
   //bdata2 = data;
   //bsize2 = size;
@@ -167,19 +138,25 @@ void artnetTask2(void* parameter) {
   }
 }
 
-
+#ifdef ETH_CAP
 void conGuardTask(void* parameter) {
   while(1){
 
     while (WiFi.status() != WL_CONNECTED){
-      if (led.ethCap && !ETH.linkUp()){
-        ESP.restart();
+      if (led.ethCap){
+        Serial.println("EthCAP check");
+        if(!ETH.linkUp()){
+          ESP.restart();
+        }
       }
        vTaskDelay(5 / portTICK_PERIOD_MS);  // Adjust delay as needed
     }
     while(WiFi.status() == WL_CONNECTED){
-      if (led.ethCap && ETH.linkUp()){
-        ESP.restart();
+      if (led.ethCap){
+               Serial.println("EthCAP check");
+        if (ETH.linkUp()){
+          ESP.restart();
+        }
       }
       vTaskDelay(5 / portTICK_PERIOD_MS);  // Adjust delay as needed
     }
@@ -192,6 +169,8 @@ void conGuardTask(void* parameter) {
     
   }
 }
+#endif
+
 void otaTask(void* parameter) {
   while(1){
      ArduinoOTA.handle();
@@ -208,9 +187,11 @@ void setup() {
   // init eeprom
   EEPROM.begin(512);
   initializeEEPROM();
-  if (led.ethCap){
-    ETH.begin();
-  }
+  
+  #ifdef ETH_CAP
+  ETH.begin();
+  #endif
+  
   // debug listing all files on filesystem
   //listFiles(SPIFFS, "/");
 
@@ -261,6 +242,9 @@ void setup() {
   Serial.println("16BitMode: " + b_16Bit);
   Serial.println("storedUniverseStart: " + storedUniverseStart);
   Serial.println("storedUniverseEnd: " + storedUniverseEnd);
+  Serial.println("EthCap: " + String(led.ethCap));
+  Serial.println("FallbackWifi: " + b_failover);
+
 
   Serial.print("WiFi Hostname: ");
   Serial.println(WiFi.getHostname());
@@ -273,9 +257,14 @@ void setup() {
   effect.initialize();
   led.initialize(NrOfLeds, DmxAddr);
   Serial.println("Nework setup start");
-  if (led.ethCap && ETH.linkUp()) {
-    Serial.println("Ethernet connected");
-    Serial.println(ETH.localIP());
+  if (led.ethCap) {
+#ifdef ETH_CAP
+    Serial.println("Ethernet capable.. checking connection");
+    if(ETH.linkUp()) {
+      Serial.println("Ethernet connected");
+      Serial.println(ETH.localIP());
+    }
+#endif
   } else {
     Serial.println("Ethernet not connected starting wifi");
     // Start Access Point if no stored WiFi credentials
@@ -296,10 +285,13 @@ void setup() {
         delay(1000);
         Serial.println("Connecting to WiFi...");
         attempts++;
-        if (led.ethCap && ETH.linkUp())
-        {
-          Serial.println("ETH connected, rebooting...");
-          ESP.restart();
+        if (led.ethCap){
+#ifdef ETH_CAP
+          if(ETH.linkUp()){
+            Serial.println("ETH connected, rebooting...");
+            ESP.restart();
+          }
+#endif
         }
       }
 
@@ -316,10 +308,12 @@ void setup() {
   }
   
   // if connected start connection guard task to ensure we are alwasy able to connect.
+  #ifdef ETH_CAP
   if (b_failover > 0)
   {
       xTaskCreatePinnedToCore(conGuardTask, "ConGuardTask", 2048, NULL, 3, NULL, 1);
   }
+  #endif
   // If connected, start normal mode
   Serial.println("Nework setup done");
   MDNS.begin(HOST_NAME.c_str());
