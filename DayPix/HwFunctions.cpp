@@ -35,6 +35,10 @@ void setupHw(){
   }
 }
 
+void reset(){
+   ESP.restart();
+}
+
 void listFiles(fs::FS &fs, const char *dirname) {
   Serial.printf("Listing directory: %s\n", dirname);
 

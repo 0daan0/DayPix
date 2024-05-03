@@ -20,6 +20,7 @@ void handleDiagnostic(AsyncWebServerRequest* request);
 void handle8BitTest(AsyncWebServerRequest* request);
 void handle16BitTest(AsyncWebServerRequest* request);
 void handleBlankLEDSTest(AsyncWebServerRequest* request);
+void handleReboot(AsyncWebServerRequest* request);
 
 String getStoredString(int address);
 int getStoredInt(int address);

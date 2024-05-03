@@ -11,7 +11,7 @@
 #include "HwFunctions.h"
 
 //#include <SPIFFS.h>
-
+ledDriver ledDriverInstance; 
 AsyncWebServer server(80);
 
 void setupWebServer() {
@@ -30,6 +30,7 @@ void setupWebServer() {
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest* request) {
     request->send(200, "text/html", "<h1>Updating...</h1>");
   }, handleUpdate);
+  server.on("/reboot", HTTP_POST, handleReboot);
 
 
 server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -219,8 +220,10 @@ html += "</style></head><body>";
   html += "Device Name    : <input type='text' name='devicename' value='" + DEV_NAME + "'><br>";
   html += "WiFi SSID    : <input type='text' name='ssid' value='" + String(getStoredString(SSID_EEPROM_ADDR)) + "'><br>";
   html += "WiFi Password: <input type='password' name='password' value='" + String(getStoredString(PASS_EEPROM_ADDR)) + "'><br>";
+  if (led.ethCap){
   html += "Ethernet to Wifi Failover   : <input type='checkbox' name='b_failover' " + String(b_failover ? "checked" : "") + " value='" + String(b_failover) + "'><br>";
   html += "<p>Failover mode will fallback to wifi when Ethernet is disconnected</p>";
+  }
   html += "</select><br>";
   html += "<div id='signalStrength'></div>";
   html += "<div id='signalMeter' style='max-width: 400px; border: 1px solid black;'></div>";  // Set max width to 400 pixels with a black border
@@ -287,6 +290,7 @@ html += "</style></head><body>";
   html += "<p>Normal mode: Lowest address = first LED outwards from the controller</p>";
   html += "<p>Reverse mode: Highest address = first LED outwards from the controller</p>";
   html += "<p>NOTE: Default color space is BGR in reverse order this will be RGB</p>";
+  
   // Add the Identify button with spacing
   html += "<form id='saveForm' action='/save' method='post'>";
   html += "<input type='submit' value='Save' onclick='saveClicked()' style='margin-bottom: 10px; margin-top: 10px;'>";
@@ -294,12 +298,18 @@ html += "</style></head><body>";
   html += "<form id='identifyForm' method='post'>";
   html += "<input type='button' value='Identify' onclick='identifyClicked()' style='margin-top: 10px;'>";
   html += "</form>";
+  // add reboot button
+  html += "<form id='rebootForm' method='post'>";
+  html += "<input type='button' value='Reboot' onclick='rebootClicked()' style='margin-top: 10px;'>";
+  html += "</form>";
+
   // Updated firmware version display
   html += "<form method='POST' action='/update' enctype='multipart/form-data' style='margin-top: 20px;'>";
   html += "Firmware Update: <input type='file' name='update'><br><br>";
   html += "<input type='submit' value='Update'>";
   html += "</form>";
   html += "<p>Firmware Version: " + String(FIRMWARE_VERSION) + "</p>";
+  html += "<p>HW Version: " + String(ledDriverInstance.hwVersion) + "</p>";
   html += "<p>Daniel Guurink-Hoogerwerf</p>";
   html += "<a href='/diagnostic'>Diagnostics</a><br>";
   // script for identify button
@@ -310,11 +320,23 @@ html += "</style></head><body>";
   html += "xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');";
   html += "xhttp.send();";
   html += "}";
+  html += "function rebootClicked() {";
+  html += "var xhttp = new XMLHttpRequest();";
+  html += "xhttp.open('POST', '/reboot', true);";
+  html += "xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');";
+  html += "xhttp.send();";
+  html += "}";
   html += "</script>";
   // Include the JavaScript code
   html += script;
   html += "</body></html>";
   request->send(200, "text/html", html);
+}
+
+void handleReboot(AsyncWebServerRequest* request) {
+  request->send(200, "text/plain", "Rebooting...");
+  delay(1000);
+  ESP.restart();
 }
 
 void handleDiagnostic(AsyncWebServerRequest* request) {
@@ -461,18 +483,28 @@ void handleSave(AsyncWebServerRequest* request) {
   Serial.println(universe_end);
   // Store in memory
 
-  // script to go back to homepage after 5 seconds
   String redirectScript = R"(
     <script>
-      setTimeout(function() {
-        window.history.back();
-      }, 10000);
+      var count = 10;
+      var countdown = setInterval(function() {
+        document.getElementById("countdown").innerHTML = count;
+        count--;
+        if (count < 0) {
+          clearInterval(countdown);
+          window.history.back();
+        }
+      }, 1000);
     </script>
   )";
-  String responseHtml = "<h1>Settings saved! Rebooting...</h1>" + redirectScript;
+
+  String responseHtml = "<html><head><style>body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; }</style></head><body><h1>Settings saved! Rebooting in <span id=\"countdown\">10</span> ..." + redirectScript + "</h1></body></html>";
+
+
   request->send(200, "text/html", responseHtml);
+
   // set the wifi pass and ssid
   WiFi.begin(ssid.c_str(), password.c_str());
+  delay(1000);
   // blink led
   led.ledOn();
   // delay to let memory written 

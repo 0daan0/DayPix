@@ -4,8 +4,9 @@
 
 #include <Arduino.h>
 // Define macros for different hardware platforms
-//#define ESP32C3
-#define ESP_ETH01
+#define XIAO_ESP32C3
+//#define XIAO_ESP32S3
+//#define ESP_ETH01
 
 class ledDriver {
 public:
@@ -34,8 +35,7 @@ public:
   static void cFlash();
   void ledTest();
 
-private:
-#ifdef ESP32C3
+#ifdef XIAO_ESP32S3
     // Pins for ESP32C3
     int latchPin = A0;
     int dataPin = A1;
@@ -45,6 +45,20 @@ private:
     int dataPin2 = A4;
     int clockPin2 = A5;
 
+    bool ethCap = false;
+    const char* hwVersion = "DP1P.WL.S3";
+#elif defined(XIAO_ESP32C3)
+    // Pins for ESP32C3
+    int latchPin = D0;
+    int dataPin = D1;
+    int clockPin = D2;
+
+    int latchPin2 = D3;
+    int dataPin2 = D4;
+    int clockPin2 = D5;
+
+    bool ethCap = false;
+    const char* hwVersion = "DP1P.WL.C3";
 #elif defined(ESP_ETH01)
     // Pins for ESP_ETH01
     int latchPin = IO15;
@@ -55,6 +69,8 @@ private:
     int dataPin2 = IO4;
     int clockPin2 = IO2;
 
+    bool ethCap = true;
+    const char* hwVersion = "DP2P.WL.ETH.LX6";
     // Add pins for ESP_ETH01 if needed
 #endif
   int NumberOfLeds;

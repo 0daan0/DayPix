@@ -172,13 +172,13 @@ void conGuardTask(void* parameter) {
   while(1){
 
     while (WiFi.status() != WL_CONNECTED){
-      if (!ETH.linkUp()){
+      if (led.ethCap && !ETH.linkUp()){
         ESP.restart();
       }
        vTaskDelay(5 / portTICK_PERIOD_MS);  // Adjust delay as needed
     }
     while(WiFi.status() == WL_CONNECTED){
-      if (ETH.linkUp()){
+      if (led.ethCap && ETH.linkUp()){
         ESP.restart();
       }
       vTaskDelay(5 / portTICK_PERIOD_MS);  // Adjust delay as needed
@@ -208,7 +208,9 @@ void setup() {
   // init eeprom
   EEPROM.begin(512);
   initializeEEPROM();
-  ETH.begin();
+  if (led.ethCap){
+    ETH.begin();
+  }
   // debug listing all files on filesystem
   //listFiles(SPIFFS, "/");
 
@@ -271,7 +273,7 @@ void setup() {
   effect.initialize();
   led.initialize(NrOfLeds, DmxAddr);
   Serial.println("Nework setup start");
-  if (ETH.linkUp()) {
+  if (led.ethCap && ETH.linkUp()) {
     Serial.println("Ethernet connected");
     Serial.println(ETH.localIP());
   } else {
@@ -294,7 +296,7 @@ void setup() {
         delay(1000);
         Serial.println("Connecting to WiFi...");
         attempts++;
-        if (ETH.linkUp())
+        if (led.ethCap && ETH.linkUp())
         {
           Serial.println("ETH connected, rebooting...");
           ESP.restart();
