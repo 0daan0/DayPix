@@ -468,6 +468,8 @@ void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, con
       sendData(b, dataPin, clockPin);
     }
     digitalWrite(latchPin, HIGH);
+    //digitalWrite(latchPin, LOW);
+    //digitalWrite(latchPin, HIGH);
   }
   void ledDriver::rgbEffect(void* parameter) {
     int number = reinterpret_cast<int>(parameter);

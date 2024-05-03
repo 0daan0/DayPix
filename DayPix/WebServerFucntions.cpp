@@ -35,45 +35,74 @@ void setupWebServer() {
 
 server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
     // HTML for the LED control page
-    String html = "<html><head><title>LED Control</title></head><body>";
-    html += "<h1>LED Control</h1>";
-    html += "<form id='ledForm'>";
-    html += "Red: <input type='range' id='redSlider' name='red' min='0' max='255'><br>";
-    html += "Green: <input type='range' id='greenSlider' name='green' min='0' max='255'><br>";
-    html += "Blue: <input type='range' id='blueSlider' name='blue' min='0' max='255'><br>";
-    html += "</form></body>";
-    // JavaScript for handling slider changes and sending Fetch API requests
-    html += "<script>";
-    html += "const redSlider = document.getElementById('redSlider');";
-    html += "const greenSlider = document.getElementById('greenSlider');";
-    html += "const blueSlider = document.getElementById('blueSlider');";
-    html += "const ledForm = document.getElementById('ledForm');";
-    html += "redSlider.addEventListener('input', updateLed);";
-    html += "greenSlider.addEventListener('input', updateLed);";
-    html += "blueSlider.addEventListener('input', updateLed);";
-    html += "function updateLed() {";
-    html += "const red = redSlider.value;";
-    html += "const green = greenSlider.value;";
-    html += "const blue = blueSlider.value;";
-    html += "fetch('/ledcontrol', {";
-    html += "method: 'POST',";
-    html += "headers: {";
-    html += "'Content-Type': 'x-www-form-urlencoded'";
-    html += "},";
-    html += "body: 'red=' + encodeURIComponent(red) + '&green=' + encodeURIComponent(green) + '&blue=' + encodeURIComponent(blue)";
-    html += "})";
-    html += ".then(response => {";
-    html += "if (response.ok) {";
-    html += "console.log('LEDs updated successfully');";
-    html += "} else {";
-    html += "console.error('Failed to update LEDs');";
-    html += "}";
-    html += "})";
-    html += ".catch(error => {";
-    html += "console.error('Error:', error);";
-    html += "});";
-    html += "}";
-    html += "</script>";
+
+   
+  String html = "<html><head><style>"
+              "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; }"
+              "h1 { text-align: center; border: 3px solid; max-width: 400px; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 10px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }"
+              "form { max-width: 400px; margin: 0 auto; }"
+              "label { display: block; margin-bottom: 5px; }"
+              "input[type='range'] { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; }"
+              "input[type='submit'], input[type='button'] { width: 100%; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }"
+              "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }"
+              "</style></head><body>";
+
+html += "<h1>DayPix Control</h1>";
+html += "<form id='ledForm'>";
+html += "Red: <input type='range' id='redSlider' name='red' min='0' max='255'><br>";
+html += "Green: <input type='range' id='greenSlider' name='green' min='0' max='255'><br>";
+html += "Blue: <input type='range' id='blueSlider' name='blue' min='0' max='255'><br>";
+html += "<button onclick='redirectToRoot()'>Device Config</button>"; // Button to redirect to root page
+html += "</form></body>";
+
+// JavaScript for handling slider changes and sending Fetch API requests
+html += "<script>";
+html += "const redSlider = document.getElementById('redSlider');";
+html += "const greenSlider = document.getElementById('greenSlider');";
+html += "const blueSlider = document.getElementById('blueSlider');";
+html += "let controller = new AbortController();"; // Create an AbortController
+html += "let signal = controller.signal;"; // Get the signal from the controller
+
+html += "function updateLed() {";
+html += "  controller.abort();"; // Abort previous request
+html += "  controller = new AbortController();"; // Create a new controller
+html += "  signal = controller.signal;"; // Update the signal
+
+html += "  const red = redSlider.value;";
+html += "  const green = greenSlider.value;";
+html += "  const blue = blueSlider.value;";
+html += "  fetch('/ledcontrol', {";
+html += "    method: 'POST',";
+html += "    headers: {";
+html += "      'Content-Type': 'application/x-www-form-urlencoded'";
+html += "    },";
+html += "    body: 'plain=' + encodeURIComponent('red=' + red + '&green=' + green + '&blue=' + blue),";
+html += "    signal: signal"; // Pass the signal to the fetch request
+html += "  })";
+html += "  .then(response => {";
+html += "    if (response.ok) {";
+html += "      console.log('LEDs updated successfully');";
+html += "    } else {";
+html += "      console.error('Failed to update LEDs');";
+html += "    }";
+html += "  })";
+html += "  .catch(error => {";
+html += "    console.error('Error:', error);";
+html += "  });";
+html += "}";
+html += "function redirectToRoot() {"; // Function to redirect to root page
+html += "  window.location.href = 'http://' + window.location.hostname;"; // Redirect to web server IP address
+html += "}";
+html += "redSlider.addEventListener('input', updateLed);";
+html += "greenSlider.addEventListener('input', updateLed);";
+html += "blueSlider.addEventListener('input', updateLed);";
+html += "</script>";
+
+html += "</body></html>";
+
+
+
+
     html += "</html>";
     request->send(200, "text/html", html);
 });
@@ -98,6 +127,7 @@ void handleLedControl(AsyncWebServerRequest* request) {
  
            // Check if there is a request body
     // Check if the request has a body
+    /*
   if (request->hasParam("plain", true)) {
     String body = request->getParam("plain", true)->value();
 
@@ -114,6 +144,28 @@ void handleLedControl(AsyncWebServerRequest* request) {
   } else {
     // If the request body is missing, respond with an error message
     request->send(400, "text/plain", "Missing request body");
+  }
+}*/
+   
+  // Check if the request has a body
+  if (request->hasArg("plain")) {
+      // Read the body of the request
+      String body = request->arg("plain");
+      
+      // Parse the body to extract red, green, and blue values
+      int red = 0, green = 0, blue = 0;
+      sscanf(body.c_str(), "red=%d&green=%d&blue=%d", &red, &green, &blue);
+      
+      // Here you can use the RGB values to control your LEDs or perform any desired action
+      // For example, you could use these values to adjust the brightness of RGB LEDs
+      Serial.printf("Received RGB values - Red: %d, Green: %d, Blue: %d\n", red, green, blue);
+      led.setLEDColor(red, green, blue);
+      
+      // Respond with a success message
+      request->send(200, "text/plain", "LEDs updated successfully");
+  } else {
+      // If the request body is missing, respond with an error message
+      request->send(400, "text/plain", "Missing request body");
   }
 }
 
@@ -643,7 +695,7 @@ void startAccessPoint() {
   server.onNotFound([](AsyncWebServerRequest *request) {
     if (!request->host().equalsIgnoreCase(WiFi.softAPIP().toString())) {
       AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "");
-      response->addHeader("Location", "http://" + WiFi.softAPIP().toString());
+      response->addHeader("Location", "http://" + WiFi.softAPIP().toString()+ "/ledcontrol");
       request->send(response);
     }
   });

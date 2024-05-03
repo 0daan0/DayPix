@@ -17,7 +17,7 @@ int DmxAddr = 0;
 bool b_APmode = false;
 int b_16Bit = 0;
 int b_failover = 0;
-int b_silent = 0;
+int b_silent = 1;
 int b_reverseArray = 0; 
 bool identify = false;
 bool diag = false;
@@ -27,7 +27,7 @@ String DEV_NAME = "";
 String HOST_NAME;
 const char* www_username = "admin";
 const char* www_password = "admin";
-String FIRMWARE_VERSION = "1.1.8";
+String FIRMWARE_VERSION = "1.1.9";
 float GAMMA_CORRECTION = 1.8;
 
 

@@ -1,11 +1,11 @@
 #include <WiFi.h>
 #include <ESPAsyncWebSrv.h>
 #include <EEPROM.h>
-#ifdef ETH_CAP
+//#ifdef ETH_CAP
 #include <ArtnetETH.h>
-#else
-#include <ArtnetWiFi.h>
-#endif
+//#else
+//#include <ArtnetWiFi.h>
+//#endif
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "rgb_effects.h"
@@ -278,7 +278,7 @@ void setup() {
       // Attempt to connect with a timeout
       int attempts = 0;
       while (WiFi.status() != WL_CONNECTED && attempts < WIFI_ATTEMPT) {
-        if (b_silent == 0)
+        if (storedBsilent == 0)
         {
           led.blink(1);
         }
@@ -328,7 +328,7 @@ void setup() {
   Serial.print("mDNS Name: ");
   Serial.println(MDNS.hostname(0));
   // display led effect when connected
-  if (b_silent == 0)
+  if (storedBsilent == 0)
   {
     led.ledTest();
   }
