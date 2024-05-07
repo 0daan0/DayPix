@@ -29,5 +29,22 @@ const char* www_username = "admin";
 const char* www_password = "admin";
 String FIRMWARE_VERSION = "1.1.9";
 float GAMMA_CORRECTION = 1.8;
+const char* APpass = "setupdaypix";
 
 
+void setDiag(bool value)
+{
+  diag = value;
+};
+void setSilent(int value)
+{
+  b_silent = value;
+};
+void setReverse(int value)
+{
+  b_reverseArray = value;
+};
+void setFailover(int value)
+{
+  b_failover = value;
+};

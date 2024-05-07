@@ -4,7 +4,9 @@
 #define Config_h
 
 #include <Arduino.h>
+#include "LedDriver.h"
 
+extern ledDriver ledDriverInstance;
 // Device variables
 extern TaskHandle_t dnsTaskHandle;
 extern uint8_t universe9;
@@ -35,6 +37,12 @@ extern String FIRMWARE_VERSION;
 extern const char* www_username;
 extern const char* www_password;
 extern float GAMMA_CORRECTION; 
+extern const char* APpass;
+
+void setDiag(bool value);
+void setSilent(int value);
+void setReverse(int value);
+void setFailover(int value);
 
 // Add other global variables here
 // Define the marker value for EEPROM initialization

@@ -51,7 +51,7 @@ ledDriver::ledDriver() {
   void ledDriver::sendData16Bit(uint16_t value, int dataPin, int clockPin) {
     
     float normalizedValue = value / 65535.0; // Assuming value is a 16-bit value now
-    float correctedValue = pow(normalizedValue, GAMMA_CORRECTION) * 65535.0;
+    float correctedValue = pow(normalizedValue, 2.5) * 65535.0;
     int bit = static_cast<int>(correctedValue);
        
     for (int i = 15; i >= 0; i--) {
@@ -64,33 +64,36 @@ ledDriver::ledDriver() {
 void ledDriver::_8bTest(){
   for (int j = 0 ; j <256; j++){
     digitalWrite(latchPin, LOW);
-    //delay(20);
-    //digitalWrite(clockPin, HIGH);
-    //digitalWrite(clockPin, LOW);
-    //digitalWrite(dataPin, (1>>1) & 0x01); 
-    for (int i = 7; i >= 0; i--) {
-
-      digitalWrite(dataPin, (j >> i) & 0x01);
-         digitalWrite(clockPin, HIGH);
-      digitalWrite(clockPin, LOW);
-        digitalWrite(clockPin, HIGH);
-      digitalWrite(clockPin, LOW);
-    }
+    //feed watchdog 
+    rstWdt();
+    delay(10);
+    sendData(j, dataPin, clockPin);
+    digitalWrite(latchPin, HIGH);
+  }
+  for (int j = 255; j >= 0; j--) {
+    digitalWrite(latchPin, LOW);
+    // Feed watchdog 
+    rstWdt();
+    delay(10);
+    sendData(j, dataPin, clockPin);
     digitalWrite(latchPin, HIGH);
   }
 }
 void ledDriver::_16bTest(){
-  for (int j = 0 ; j <256 ; j++){
+  for (int j = 0 ; j <65535 ; j++){
     digitalWrite(latchPin, LOW);
-    uint16_t value = static_cast<uint16_t>(j) << 8;
-    delay(1);
-    for (int i = 15; i >= 0; i--) {
-
-        digitalWrite(dataPin, (value >> i) & 0x01);
-              digitalWrite(clockPin, HIGH);
-        digitalWrite(clockPin, LOW);
- 
-    }
+     //feed watchdog 
+    rstWdt();
+    delay(0.1);
+    sendData16Bit(j, dataPin, clockPin);
+    digitalWrite(latchPin, HIGH); 
+  }
+  for (int j = 65535 ; j >=0 ; j--){
+    digitalWrite(latchPin, LOW);
+      //feed watchdog 
+    rstWdt();
+    delay(0.1);
+    sendData16Bit(j, dataPin, clockPin); 
     digitalWrite(latchPin, HIGH);
   }
 }
@@ -459,18 +462,67 @@ void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, con
     sendData(255, dataPin, clockPin);
     digitalWrite(latchPin, HIGH);
   }
-  void ledDriver::setLEDColor(int r, int g, int b)
-  {
-    digitalWrite(latchPin, LOW);
-    for (int i = 0; i < NrOfLeds ; ++i) {
-      sendData(r, dataPin, clockPin);
-      sendData(g, dataPin, clockPin);
-      sendData(b, dataPin, clockPin);
-    }
-    digitalWrite(latchPin, HIGH);
-    //digitalWrite(latchPin, LOW);
-    //digitalWrite(latchPin, HIGH);
-  }
+void ledDriver::setLEDColor(int r, int g, int b)
+{
+    // Check if any of the color values are greater than 0
+    if (r > 0 || g > 0 || b > 0) {
+        setDiag(true);
+        //Serial.printf("diag: %s\n", diag ? "true" : "false");
+        digitalWrite(latchPin, LOW);
+        for (int i = 0; i < NrOfLeds ; ++i) {
+            sendData(r, dataPin, clockPin);
+            sendData(g, dataPin, clockPin);
+            sendData(b, dataPin, clockPin);
+        }
+        digitalWrite(latchPin, HIGH);
+        //delay(50);
+      }
+    else{
+        setDiag(false);
+      }
+   
+    // Decrement each color value to eventually exit the loop
+    //if (r > 0) r--;
+    //if (g > 0) g--;
+  //if (b > 0) b--;
+   
+    
+}
+/// this function uses coars and fine to get a 16bit color value 
+void ledDriver::setLEDColor16bit(int cR,int fR, int cG,int fG, int cB,int fB)
+{
+        int r = (cR * 256) + fR;
+        int g = (cG * 256) + fG;
+        int b = (cB * 256) + fB;
+
+        //Serial.printf("diag: %s\n", diag ? "true" : "false");
+        digitalWrite(latchPin, LOW);
+        for (int i = 0; i < NrOfLeds ; ++i) {
+            sendData(r, dataPin, clockPin);
+            sendData(g, dataPin, clockPin);
+            sendData(b, dataPin, clockPin);
+        }
+        digitalWrite(latchPin, HIGH);
+        //delay(50);
+  
+       
+}
+void ledDriver::setLEDColor16bit(int r ,int g, int b)
+{
+
+
+        //Serial.printf("diag: %s\n", diag ? "true" : "false");
+        digitalWrite(latchPin, LOW);
+        for (int i = 0; i < NrOfLeds ; ++i) {
+            sendData16Bit(r, dataPin, clockPin);
+            sendData16Bit(g, dataPin, clockPin);
+            sendData16Bit(b, dataPin, clockPin);
+        }
+        digitalWrite(latchPin, HIGH);
+        //delay(50);
+  
+       
+}
   void ledDriver::rgbEffect(void* parameter) {
     int number = reinterpret_cast<int>(parameter);
     // test led strip

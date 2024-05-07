@@ -1,11 +1,7 @@
 #include <WiFi.h>
 #include <ESPAsyncWebSrv.h>
 #include <EEPROM.h>
-//#ifdef ETH_CAP
-#include <ArtnetETH.h>
-//#else
-//#include <ArtnetWiFi.h>
-//#endif
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "rgb_effects.h"
@@ -17,14 +13,11 @@
 #include <esp_eth.h>
 #include "HwFunctions.h"
 
-// Definitions
-// define for wifi or eth boards
-//#define artnet ArtnetWiFiReceiver
-//#define artnet ArtnetReceiver
-//ArtnetReceiver artnet;
 #ifdef ETH_CAP
+#include <ArtnetETH.h>
 ArtnetReceiver artnet;
 #else
+#include <ArtnetWiFi.h>
 ArtnetWiFiReceiver artnet;
 #endif
 
@@ -41,9 +34,6 @@ uint16_t bsize2;
 int cb1calls=0;
 int cb2calls=0;
 // Artnet Callback
-
-
-
 
 void callback(const uint8_t* data, const uint16_t size) {    
   if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
@@ -232,7 +222,8 @@ void setup() {
   HOST_NAME = H_PRFX + "-" + DEV_NAME;
   ArduinoOTA.setHostname(HOST_NAME.c_str());
   WiFi.setHostname(HOST_NAME.c_str());
-
+  delay(100);
+ 
   // Print stored values for debugging
   Serial.println("DEV_NAME: " + DEV_NAME);
   Serial.println("SSID: " + storedSSID);
@@ -269,8 +260,9 @@ void setup() {
     Serial.println("Ethernet not connected starting wifi");
     // Start Access Point if no stored WiFi credentials
     if (storedSSID.isEmpty() || storedPassword.isEmpty()) {
-      startAccessPoint();
+      startAccessPoint(true);
     } else {
+      startAccessPoint(false);
       // Connect to WiFi
       WiFi.begin(storedSSID.c_str(), storedPassword.c_str());
 
@@ -297,7 +289,7 @@ void setup() {
 
       // If not connected, start Access Point and setup
       if (WiFi.status() != WL_CONNECTED) {
-        startAccessPoint();
+        startAccessPoint(true);
       } else {
         Serial.println("Connected to WiFi");
         Serial.println(WiFi.localIP());
@@ -382,5 +374,7 @@ void setup() {
 
 // Main loop does nothing
 void loop() {
+  while (!diag){
      artnet.parse();
+  }
 }

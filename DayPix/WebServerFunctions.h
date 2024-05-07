@@ -21,12 +21,15 @@ void handle8BitTest(AsyncWebServerRequest* request);
 void handle16BitTest(AsyncWebServerRequest* request);
 void handleBlankLEDSTest(AsyncWebServerRequest* request);
 void handleReboot(AsyncWebServerRequest* request);
+void handleSetDiag(AsyncWebServerRequest* request);
+void handleRainbow(AsyncWebServerRequest* request);
+void handleFileUpload(AsyncWebServerRequest* request);
 
 String getStoredString(int address);
 int getStoredInt(int address);
 void storeString(int address, const String& value);
 void storeByte(int address, uint8_t value);
 
-void startAccessPoint();
+void startAccessPoint(bool waitForClient);
 
 #endif

@@ -5,9 +5,9 @@
 #include <Arduino.h>
 // Define macros for different hardware platforms
 //#define XIAO_ESP32C3
-//#define XIAO_ESP32S3
-#define ESP_ETH01
-#define ETH_CAP
+#define XIAO_ESP32S3
+//#define ESP_ETH01
+
 
 class ledDriver {
 public:
@@ -25,6 +25,8 @@ public:
   void writePixelBufferPort2(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset);
   void writePixelBuffer_(const uint8_t* data, const uint16_t length, const uint16_t limit, const uint16_t start);
   void setLEDColor(int r, int g, int b);
+  void setLEDColor16bit(int cR,int fR, int cG,int fG, int cB,int fB);
+  void setLEDColor16bit(int r ,int g, int b);
   void showBuffer();
   void showBufferP2();
   void blankLEDS(int nrToblank);
@@ -69,7 +71,7 @@ public:
     int latchPin2 = IO33;
     int dataPin2 = IO4;
     int clockPin2 = IO2;
-
+    #define ETH_CAP
     bool ethCap = true;
     const char* hwVersion = "DP2P.WL.ETH.LX6";
     // Add pins for ESP_ETH01 if needed
