@@ -289,7 +289,8 @@ void setup() {
 
       // If not connected, start Access Point and setup
       if (WiFi.status() != WL_CONNECTED) {
-        startAccessPoint(true);
+        WiFi.disconnect(false);
+        //startAccessPoint(true);
       } else {
         Serial.println("Connected to WiFi");
         Serial.println(WiFi.localIP());
