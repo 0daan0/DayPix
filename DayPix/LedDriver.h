@@ -4,8 +4,8 @@
 
 #include <Arduino.h>
 // Define macros for different hardware platforms
-//#define XIAO_ESP32C3
-#define XIAO_ESP32S3
+#define XIAO_ESP32C3
+//#define XIAO_ESP32S3
 //#define ESP_ETH01
 
 
@@ -24,6 +24,7 @@ public:
   void writePixelBufferFull(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset);
   void writePixelBufferPort2(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset);
   void writePixelBuffer_(const uint8_t* data, const uint16_t length, const uint16_t limit, const uint16_t start);
+  void setLEDColor(int r, int g, int b, int nrLeds);
   void setLEDColor(int r, int g, int b);
   void setLEDColor16bit(int cR,int fR, int cG,int fG, int cB,int fB);
   void setLEDColor16bit(int r ,int g, int b);

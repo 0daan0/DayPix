@@ -11,10 +11,13 @@
 #include "HwFunctions.h"
 #include <SPIFFS.h>
 #include <FS.h> 
+#include <TaskScheduler.h>
 
 //ledDriver ledDriverInstance; 
 AsyncWebServer server(80);
 RGBEffects effects;
+Scheduler scheduler;
+Task *taskReadEffects = nullptr;
 
 // Function to determine the MIME type based on the file extension
 String getContentType(String filename) {
@@ -42,6 +45,36 @@ void loginUser(AsyncWebServerRequest* request)
   }
 }
 
+void applyLEDEffectFromFile(const String& filename) {
+    Serial.println("trying to apply effect");
+    File file = SPIFFS.open(filename, "r"); // or LittleFS.open if using LittleFS
+    if (!file) {
+        Serial.println("Failed to open file for reading");
+        return;
+    }
+
+    String line;
+    while (file.available()) {
+        line = file.readStringUntil('\n');
+        line.trim(); // Remove any leading/trailing whitespace
+        
+        // Parse the line for RGB and timing values
+        int commaIndex1 = line.indexOf(',');
+        int commaIndex2 = line.indexOf(',', commaIndex1 + 1);
+        int r = line.substring(0, commaIndex1).toInt();
+        int g = line.substring(commaIndex1 + 1, commaIndex2).toInt();
+        int b = line.substring(commaIndex2 + 1, line.lastIndexOf(',')).toInt();
+        int time = line.substring(line.lastIndexOf(',') + 1).toInt();
+
+        // Set LED color
+        led.setLEDColor(r, g, b);
+
+        // Maintain the color for the specified duration
+        delay(time);
+    }
+
+    file.close();
+}
 
 void setupWebServer() {
    if (SPIFFS.begin(true)) {
@@ -146,6 +179,8 @@ void setupWebServer() {
                     "input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 60px; height: 60px; background: #4CAF50; border-radius: 50%; cursor: pointer; }"
                     "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: #4CAF50; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; }"
                     "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }"
+                    "a {color: pink;}"
+                    "a:hover {color: white}"
                     "</style></head><body>";
 
     // Generate response with file upload form, file listing, and space information in KB
@@ -169,6 +204,7 @@ void setupWebServer() {
     // Send response to client
     request->send(200, "text/html", css+response);
     });
+
  server.onFileUpload([](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     static File uploadFile;
     if (!index) { // Start of upload
@@ -183,7 +219,43 @@ void setupWebServer() {
     }
   });
 
+ // Serve static files
+  server.serveStatic("/", SPIFFS, "/");
 
+  // List .fx files endpoint
+  server.on("/list-files", HTTP_GET, [](AsyncWebServerRequest *request){
+    String fileList = "[";
+    File root = SPIFFS.open("/");
+    File file = root.openNextFile();
+    bool firstFile = true;
+    while (file) {
+      if (String(file.name()).endsWith(".fx")) {
+        if (!firstFile) fileList += ",";
+        fileList += "\"" + String(file.name()) + "\"";
+        firstFile = false;
+      }
+      file = root.openNextFile();
+    }
+    fileList += "]";
+    request->send(200, "application/json", fileList);
+  });
+
+  // Read selected file content
+  server.on("/read-file", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (request->hasParam("file")) {
+      String fileName = request->getParam("file")->value();
+      File file = SPIFFS.open("/" + fileName);
+      if (file) {
+        String fileContent = file.readString();
+        request->send(200, "text/plain", fileContent);
+        file.close();
+      } else {
+        request->send(404, "text/plain", "File not found");
+      }
+    } else {
+      request->send(400, "text/plain", "Bad request");
+    }
+  });
 
       // Route to handle file upload form and file upload POST request
  
@@ -201,17 +273,73 @@ void setupWebServer() {
 
  
   });
+server.on("/applyEffect", HTTP_POST, [](AsyncWebServerRequest *request){
+   if (request->hasParam("effectFile", true)) {
+        String effectFile = request->getParam("effectFile", true)->value();
+        Serial.println("Selected effect file: " + effectFile);
+
+        File file = SPIFFS.open("/" + effectFile, "r");
+        if (!file) {
+            Serial.println("Failed to open effect file");
+            request->send(500, "text/plain", "Failed to open effect file");
+            return;
+        }
+        request->send(200, "text/plain", "Effect applied");
+        // Read the file and apply the LED effects
+        bool configRead = false; // Flag to track if configuration is read
+        int nrLeds = 1; // Default value for nrLeds
+        int fx_repeat = 5; // Default value for fx_repeat
+        
+        while (fx_repeat > 0) {
+            // Reset file pointer to the beginning of the file for each repetition
+            file.seek(0);
+            
+            while (file.available()) {
+                String line = file.readStringUntil('\n');
+                line.trim();
+                if (line.length() == 0) continue; // Skip empty lines
+
+                // If configuration is not yet read, parse the configuration
+                if (!configRead && line.startsWith("nrLeds=") && line.indexOf(", fx_repeat=") != -1) {
+                    sscanf(line.c_str(), "nrLeds=%d, fx_repeat=%d", &nrLeds, &fx_repeat);
+                    configRead = true;
+                    continue; // Skip processing configuration line
+                }
+
+                // Process LED effect lines
+                int r, g, b, delayTime;
+                sscanf(line.c_str(), "%d,%d,%d,%d", &r, &g, &b, &delayTime);
+
+                led.setLEDColor(r, g, b, nrLeds);
+                delay(delayTime);
+                rstWdt();
+            }
+
+            fx_repeat--; // Decrement the repetition counter
+        }
+        file.close();
+    } else {
+        request->send(400, "text/plain", "No effect file selected");
+    }
+
+    // Respond to the request
+   
+});
+
+
 
 server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
-    // HTML for the LED control page 
+    // HTML for the LED control page
     String html = "<html><head><style>"
-                  "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; padding: 10px; background-image: url(/file?filename=bg.gif); background-size: cover; }" // Added background image
+                  "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; padding: 10px; background-image: url(/file?filename=bg.gif); background-size: cover; }" 
                   "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 30px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 36px; }"
                   "form { max-width: 90%; margin: 0 auto; }"
                   "label { display: block; margin-bottom: 30px; font-size: 24px; }"
-                  "input[type='range'] { width: 100%; height: 80px; padding: 30px; margin-bottom: 30px; box-sizing: border-box; background-color: rgba(52, 53, 65, 0.7); color: #EFEFE0; border: 2px solid #EFEFE0; border-radius: 20px; -webkit-appearance: none; }" // Added opacity to slider background
+                  "input[type='range'] { width: 100%; height: 80px; padding: 30px; margin-bottom: 30px; box-sizing: border-box; background-color: rgba(52, 53, 65, 0.7); color: #EFEFE0; border: 2px solid #EFEFE0; border-radius: 20px; -webkit-appearance: none; }"
                   "input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 60px; height: 60px; background: #4CAF50; border-radius: 50%; cursor: pointer; }"
-                  "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: rgba(76, 175, 80, 0.7); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; opacity: 0.7; }" // Added opacity to buttons
+                  "input[type='submit'], input[type='button'], select { width: 100%; padding: 40px; margin-top: 30px; background-color: rgba(76, 175, 80, 0.7); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; opacity: 0.7; }"
+                  "input[type='submit']:hover, input[type='button']:hover, select:hover { background-color: #45a049; opacity: 1; }"
+                   "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: rgba(76, 175, 80, 0.7); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; opacity: 0.7; }" // Added opacity to buttons
                   "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; opacity: 1; }" // Adjusted opacity on hover
                   "</style>"
                   "<script>"
@@ -230,28 +358,59 @@ server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
                   "});"
                   "</script>"
                   "</head><body>";
-
+                  "</style></head><body>";
+    
     html += "<h1>DayPix Control</h1>";
     html += "<form id='ledForm'>";
-    html += "<label for='redSlider'style='font-size: 2.5rem;'>Red:</label><br>";
+    html += "<label for='redSlider' style='font-size: 2.5rem;'>Red:</label><br>";
     html += "<input type='range' id='redSlider' name='red' min='0' max='255' value='0'><br>";
-    html += "<label for='greenSlider'style='font-size: 2.5rem;'>Green:</label><br>";
+    html += "<label for='greenSlider' style='font-size: 2.5rem;'>Green:</label><br>";
     html += "<input type='range' id='greenSlider' name='green' min='0' max='255' value='0'><br>";
-    html += "<label for='blueSlider'style='font-size: 2.5rem;'>Blue:</label><br>";
+    html += "<label for='blueSlider' style='font-size: 2.5rem;'>Blue:</label><br>";
     html += "<input type='range' id='blueSlider' name='blue' min='0' max='255' value='0'><br>";
     html += "<input type='button' value='Rainbow Chase' onclick='runRainbowChase()' style='margin-top: 30px;'>";
+    html += "</form>";
+    
+
+    // Dropdown for effect files
+    html += "<form id='effectForm' method='post'>";
+    html += "<label for='effectSelect' style='font-size: 2.5rem;'>Select Effect:</label><br>";
+    html += "<select id='effectSelect' name='effectFile'>";
+    
+    // Open SPIFFS directory
+    String fileListing;
+    File root = SPIFFS.open("/");
+    if (!root) {
+        Serial.println("Failed to open directory");
+        request->send(500, "text/plain", "Failed to open directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while (file) {
+        if (!file.isDirectory() && String(file.name()).endsWith(".fx")) {
+            Serial.println("Found .fx file: " + String(file.name()));
+            fileListing += "<option value='" + String(file.name()) + "'>" + String(file.name()) + "</option>";
+        }
+        file = root.openNextFile();
+    }
+
+    root.close();
+    
+    html += fileListing;
+    html += "</select>";
+    html += "<input type='submit' value='Apply Effect'>";
     html += "</form>";
 
     html += "<form id='Config' method='post'>";
     html += "<input type='button' value='Config' onclick='window.location.href=\"/\"' style='margin-top: 30px;'>";
     html += "</form>";
 
-    // JavaScript for handling slider changes and sending Fetch API requests
     html += "<script>";
     html += "const redSlider = document.getElementById('redSlider');";
     html += "const greenSlider = document.getElementById('greenSlider');";
     html += "const blueSlider = document.getElementById('blueSlider');";
-
+    
     html += "function updateLed() {";
     html += "  const red = redSlider.value;";
     html += "  const green = greenSlider.value;";
@@ -275,7 +434,6 @@ server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
     html += "  });";
     html += "}";
     
-    // Define the runRainbowChase function
     html += "function runRainbowChase() {";
     html += "  fetch('/rainbow', {";
     html += "    method: 'POST',";
@@ -295,15 +453,41 @@ server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
     html += "  });";
     html += "}";
 
+    html += "document.getElementById('effectForm').addEventListener('submit', function(event) {";
+    html += "  event.preventDefault();"; // Prevent default form submission behavior
+    html += "  applyEffect();"; // Call function to apply effect
+    html += "});";
+
+    html += "function applyEffect() {";
+    html += "  const effectSelect = document.getElementById('effectSelect');";
+    html += "  const selectedEffect = effectSelect.value;";
+    html += "  fetch('/applyEffect', {";
+    html += "    method: 'POST',";
+    html += "    headers: {";
+    html += "      'Content-Type': 'application/x-www-form-urlencoded'";
+    html += "    },";
+    html += "    body: 'effectFile=' + encodeURIComponent(selectedEffect)";
+    html += "  })";
+    html += "  .then(response => {";
+    html += "    if (response.ok) {";
+    html += "      console.log('Effect applied successfully');";
+    html += "    } else {";
+    html += "      console.error('Failed to apply effect');";
+    html += "    }";
+    html += "  })";
+    html += "  .catch(error => {";
+    html += "    console.error('Error:', error);";
+    html += "  });";
+    html += "}";
+    
     html += "redSlider.addEventListener('input', updateLed);";
     html += "greenSlider.addEventListener('input', updateLed);";
     html += "blueSlider.addEventListener('input', updateLed);";
     html += "</script>";
-
+    
     html += "</body></html>";
     request->send(200, "text/html", html);
 });
-
   server.begin();
 }
 

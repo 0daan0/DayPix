@@ -462,31 +462,27 @@ void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, con
     sendData(255, dataPin, clockPin);
     digitalWrite(latchPin, HIGH);
   }
-void ledDriver::setLEDColor(int r, int g, int b)
+void ledDriver::setLEDColor(int r, int g, int b )
+{
+   int nrLeds = NrOfLeds;
+   setLEDColor(r,g,b,nrLeds);
+}
+void ledDriver::setLEDColor(int r, int g, int b, int nrLeds)
 {
     // Check if any of the color values are greater than 0
     if (r > 0 || g > 0 || b > 0) {
         setDiag(true);
-        //Serial.printf("diag: %s\n", diag ? "true" : "false");
         digitalWrite(latchPin, LOW);
-        for (int i = 0; i < NrOfLeds ; ++i) {
+        for (int i = 0; i < nrLeds ; ++i) {
             sendData(r, dataPin, clockPin);
             sendData(g, dataPin, clockPin);
             sendData(b, dataPin, clockPin);
         }
         digitalWrite(latchPin, HIGH);
-        //delay(50);
       }
     else{
         setDiag(false);
-      }
-   
-    // Decrement each color value to eventually exit the loop
-    //if (r > 0) r--;
-    //if (g > 0) g--;
-  //if (b > 0) b--;
-   
-    
+      }   
 }
 /// this function uses coars and fine to get a 16bit color value 
 void ledDriver::setLEDColor16bit(int cR,int fR, int cG,int fG, int cB,int fB)

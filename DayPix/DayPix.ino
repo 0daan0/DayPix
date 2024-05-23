@@ -325,6 +325,7 @@ void setup() {
   {
     led.ledTest();
   }
+  led.blankLEDS(170);
   delay(1);
 
   // Create FreeRTOS task for ArtNet updates on core 1
