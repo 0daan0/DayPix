@@ -12,6 +12,7 @@
 #include <ESPmDNS.h>
 #include <esp_eth.h>
 #include "HwFunctions.h"
+#include <Preferences.h>
 
 #ifdef ETH_CAP
 #include <ArtnetETH.h>
@@ -177,6 +178,7 @@ void setup() {
   // init eeprom
   EEPROM.begin(512);
   initializeEEPROM();
+
   
   #ifdef ETH_CAP
   ETH.begin();
@@ -198,6 +200,13 @@ void setup() {
   int storedUniverseStart = getStoredString(UNIVERSE_START_EEPROM_ADDR).toInt();
   int storedUniverseEnd = getStoredString(UNIVERSE_END_EEPROM_ADDR).toInt();
   int storedReverseArray = getStoredString(B_REVERSE_ARRAY_EEPROM_ADDR).toInt();
+  /*
+  int storedDHCP = getStoredInt(B_DHCP_EEPROM_ADDR);
+  String storedIP = getStoredString(IP_ADDR_EEPROM_ADDR);
+  String storedSubnet = getStoredString(IP_SUBNET_EEPROM_ADDR);
+  String storedGateway = getStoredString(IP_GATEWAY_EEPROM_ADDR);
+  String storedDNS = getStoredString(IP_DNS_EEPROM_ADDR);
+*/
   // Set configuration parameters
   universe1 = storedUniverse.toInt();
   NrOfLeds = storedNrofLEDS.toInt();
@@ -206,6 +215,7 @@ void setup() {
   b_failover = storedBfailover.toInt(); // Add this line
   b_silent = storedBsilent.toInt();
   b_reverseArray = storedReverseArray;
+  //b_dhcp = storedDHCP;
 
 
   // Set device name based on the last two digits of the MAC address if not been set by user
@@ -230,11 +240,23 @@ void setup() {
   Serial.println("Password: " + storedPassword);
   Serial.println("nrOfLEDS: " + storedNrofLEDS);
   Serial.println("DMX Address: " + storedDmxAddr);
-  Serial.println("16BitMode: " + b_16Bit);
+  Serial.println("16BitMode: " + String(b_16Bit));
   Serial.println("storedUniverseStart: " + storedUniverseStart);
   Serial.println("storedUniverseEnd: " + storedUniverseEnd);
+  Serial.println("Silent: " + String(b_silent));
   Serial.println("EthCap: " + String(led.ethCap));
+  Serial.println("EthCap: " + String(led.ethCap));
+/*
+if (!storedDHCP > 0){
+  Serial.println("IP: " + storedIP);
+  Serial.println("Subnet: " + storedSubnet);
+  Serial.println("Gateway: " + storedGateway);
+  Serial.println("DNS: " + storedDNS);
   Serial.println("FallbackWifi: " + b_failover);
+}
+*/
+  //Serial.println("DHCP: " + String(storedDHCP));
+ 
 
 
   Serial.print("WiFi Hostname: ");
@@ -270,7 +292,7 @@ void setup() {
       // Attempt to connect with a timeout
       int attempts = 0;
       while (WiFi.status() != WL_CONNECTED && attempts < WIFI_ATTEMPT) {
-        if (storedBsilent == 0)
+        if (!b_silent > 0)
         {
           led.blink(1);
         }
@@ -321,7 +343,7 @@ void setup() {
   Serial.print("mDNS Name: ");
   Serial.println(MDNS.hostname(0));
   // display led effect when connected
-  if (storedBsilent == 0)
+  if (!b_silent > 0)
   {
     led.ledTest();
   }

@@ -11,13 +11,12 @@
 #include "HwFunctions.h"
 #include <SPIFFS.h>
 #include <FS.h> 
-#include <TaskScheduler.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 //ledDriver ledDriverInstance; 
 AsyncWebServer server(80);
 RGBEffects effects;
-Scheduler scheduler;
-Task *taskReadEffects = nullptr;
 
 // Function to determine the MIME type based on the file extension
 String getContentType(String filename) {
@@ -45,35 +44,56 @@ void loginUser(AsyncWebServerRequest* request)
   }
 }
 
-void applyLEDEffectFromFile(const String& filename) {
-    Serial.println("trying to apply effect");
-    File file = SPIFFS.open(filename, "r"); // or LittleFS.open if using LittleFS
+void applyLEDEffectFromFile(const String& effectFile) {
+    //char *filenameCopy = strdup(effectFile.c_str());
+    Serial.println("trying to apply effect"+ effectFile);
+    File file = SPIFFS.open("/" + effectFile, "r");
     if (!file) {
-        Serial.println("Failed to open file for reading");
+        Serial.println("Failed to open file for reading"+ effectFile);
         return;
     }
-
-    String line;
-    while (file.available()) {
-        line = file.readStringUntil('\n');
-        line.trim(); // Remove any leading/trailing whitespace
+    vTaskDelay(10 / portTICK_PERIOD_MS);  // Adjust delay as needed
+     // Read the file and apply the LED effects
+        bool configRead = false; // Flag to track if configuration is read
+        int nrLeds = 1; // Default value for nrLeds
+        int fx_repeat = 1; // Default value for fx_repeat
         
-        // Parse the line for RGB and timing values
-        int commaIndex1 = line.indexOf(',');
-        int commaIndex2 = line.indexOf(',', commaIndex1 + 1);
-        int r = line.substring(0, commaIndex1).toInt();
-        int g = line.substring(commaIndex1 + 1, commaIndex2).toInt();
-        int b = line.substring(commaIndex2 + 1, line.lastIndexOf(',')).toInt();
-        int time = line.substring(line.lastIndexOf(',') + 1).toInt();
+        while (fx_repeat > 0) {
+            // Reset file pointer to the beginning of the file for each repetition
+            file.seek(0);
+            
+            while (file.available()) {
+                String line = file.readStringUntil('\n');
+                line.trim();
+                if (line.length() == 0) continue; // Skip empty lines
 
-        // Set LED color
-        led.setLEDColor(r, g, b);
+                // If configuration is not yet read, parse the configuration
+                if (!configRead && line.startsWith("nrLeds=") && line.indexOf(", fx_repeat=") != -1) {
+                    sscanf(line.c_str(), "nrLeds=%d, fx_repeat=%d", &nrLeds, &fx_repeat);
+                    configRead = true;
+                    continue; // Skip processing configuration line
+                }
 
-        // Maintain the color for the specified duration
-        delay(time);
-    }
+                // Process LED effect lines
+                int r, g, b, delayTime;
+                sscanf(line.c_str(), "%d,%d,%d,%d", &r, &g, &b, &delayTime);
 
-    file.close();
+                led.setLEDColor(r, g, b, nrLeds);
+                delay(delayTime);
+                rstWdt();
+            }
+            fx_repeat--;
+        }
+        led.blankLEDS(170);
+         file.close();
+
+}
+
+void applyLEDEffectFromFileTask(void *parameter) {
+    char *filename = (char*)parameter;
+    applyLEDEffectFromFile(String(filename));
+    free(filename); // Free the allocated memory for the filename
+    vTaskDelete(NULL); // Delete this task when done
 }
 
 void setupWebServer() {
@@ -278,46 +298,21 @@ server.on("/applyEffect", HTTP_POST, [](AsyncWebServerRequest *request){
         String effectFile = request->getParam("effectFile", true)->value();
         Serial.println("Selected effect file: " + effectFile);
 
-        File file = SPIFFS.open("/" + effectFile, "r");
-        if (!file) {
-            Serial.println("Failed to open effect file");
-            request->send(500, "text/plain", "Failed to open effect file");
-            return;
-        }
-        request->send(200, "text/plain", "Effect applied");
-        // Read the file and apply the LED effects
-        bool configRead = false; // Flag to track if configuration is read
-        int nrLeds = 1; // Default value for nrLeds
-        int fx_repeat = 5; // Default value for fx_repeat
-        
-        while (fx_repeat > 0) {
-            // Reset file pointer to the beginning of the file for each repetition
-            file.seek(0);
-            
-            while (file.available()) {
-                String line = file.readStringUntil('\n');
-                line.trim();
-                if (line.length() == 0) continue; // Skip empty lines
+       // Allocate memory for the filename and copy it
+    char *filenameCopy = strdup(effectFile.c_str());
 
-                // If configuration is not yet read, parse the configuration
-                if (!configRead && line.startsWith("nrLeds=") && line.indexOf(", fx_repeat=") != -1) {
-                    sscanf(line.c_str(), "nrLeds=%d, fx_repeat=%d", &nrLeds, &fx_repeat);
-                    configRead = true;
-                    continue; // Skip processing configuration line
-                }
-
-                // Process LED effect lines
-                int r, g, b, delayTime;
-                sscanf(line.c_str(), "%d,%d,%d,%d", &r, &g, &b, &delayTime);
-
-                led.setLEDColor(r, g, b, nrLeds);
-                delay(delayTime);
-                rstWdt();
-            }
-
-            fx_repeat--; // Decrement the repetition counter
-        }
-        file.close();
+    // Create the task to run applyLEDEffectFromFile in a separate thread
+    xTaskCreatePinnedToCore(
+        applyLEDEffectFromFileTask,    // Task function
+        "LED Effect Task",             // Name of the task
+        2048,                          // Stack size in words
+        (void*)filenameCopy,           // Parameter to pass to the task function
+        3,                             // Priority of the task
+        NULL,                          // Task handle
+        1                              // Core to run the task on (0 or 1)
+    );
+      //xTaskCreatePinnedToCore(applyLEDEffectFromFile, "LED Effect Task", 2048, (void*)&filenameCopy, 3, NULL, 1);
+      //xTaskCreate(applyLEDEffectFromFile,"LED Effect Task",8192,(void*)&filenameCopy,1,NULL);
     } else {
         request->send(400, "text/plain", "No effect file selected");
     }
@@ -368,7 +363,7 @@ server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
     html += "<input type='range' id='greenSlider' name='green' min='0' max='255' value='0'><br>";
     html += "<label for='blueSlider' style='font-size: 2.5rem;'>Blue:</label><br>";
     html += "<input type='range' id='blueSlider' name='blue' min='0' max='255' value='0'><br>";
-    html += "<input type='button' value='Rainbow Chase' onclick='runRainbowChase()' style='margin-top: 30px;'>";
+    //html += "<input type='button' value='Rainbow Chase' onclick='runRainbowChase()' style='margin-top: 30px;'>";
     html += "</form>";
     
 
@@ -601,6 +596,27 @@ if (led.ethCap){
 html += "Ethernet to Wifi Failover   : <input type='checkbox' id='failoverSwitch' name='b_failover' value='" + String(b_failover) + "' " + (b_failover ? "checked" : "") + " onclick='toggleSwitch(this)'/><label for='failoverSwitch'></label><br>";
 html += "<p>Failover mode will fallback to wifi when Ethernet is disconnected</p>";
 }
+/*
+// IP configuration section
+html += "<h3>IP Configuration</h3>";
+html += "<form action='/saveConfig' method='post'>";
+html += "Use DHCP: <input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(readBool(B_DHCP_EEPROM_ADDR) ? "checked" : "") + "><br>";
+html += "<div id='manualConfig' style='display: " + String(readBool(B_DHCP_EEPROM_ADDR) ? "none" : "block") + ";'>";
+html += "IP Address: <input type='text' name='ipAddress' value='" +String(getStoredString(IP_ADDR_EEPROM_ADDR)) + "'><br>";
+html += "Subnet Mask: <input type='text' name='subnetMask' value='" + String(getStoredString(IP_SUBNET_EEPROM_ADDR)) + "'><br>";
+html += "Gateway: <input type='text' name='gateway' value='" + String(getStoredString(IP_GATEWAY_EEPROM_ADDR)) + "'><br>";
+html += "DNS Server: <input type='text' name='dnsServer' value='" + String(getStoredString(IP_DNS_EEPROM_ADDR)) + "'><br>";
+html += "</div>";
+html += "<script>";
+html += "document.getElementById('dhcpCheckbox').addEventListener('change', function() {";
+html += "if (this.checked) {";
+html += "document.getElementById('manualConfig').style.display = 'none';";
+html += "} else {";
+html += "document.getElementById('manualConfig').style.display = 'block';";
+html += "}";
+html += "});";
+html += "</script>";
+*/
 html += "</select><br>";
 html += "<div id='signalStrength'></div>";
 html += "<div id='signalMeter' style='max-width: 400px; border: 1px solid black;'></div>";  // Set max width to 400 pixels with a black border

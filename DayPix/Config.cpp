@@ -17,17 +17,22 @@ int DmxAddr = 0;
 bool b_APmode = false;
 int b_16Bit = 0;
 int b_failover = 0;
-int b_silent = 1;
+int b_silent = 0;
 int b_reverseArray = 0; 
+int b_dhcp = 1;
 bool identify = false;
 bool diag = false;
+String IP_ADDR = "192.168.1.123";
+String IP_SUBNET = "255.255.255.0";
+String IP_GATEWAY = "192.168.1.1";
+String IP_DNS = "192.168.1.1";
 // hostname prefix 
 String H_PRFX = "DayPix";
 String DEV_NAME = "";
 String HOST_NAME;
 const char* www_username = "admin";
 const char* www_password = "admin";
-String FIRMWARE_VERSION = "1.1.9";
+String FIRMWARE_VERSION = "1.2.0";
 float GAMMA_CORRECTION = 1.8;
 const char* APpass = "setupdaypix";
 

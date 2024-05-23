@@ -446,11 +446,14 @@ void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, con
 
   void ledDriver::blankLEDS(int nrToblank) {
     digitalWrite(latchPin, LOW);
+    digitalWrite(latchPin2, LOW);
     // blank number times 3 since each led has 3 values
     for (int i = 0; i < nrToblank * 3; ++i) {
       sendData(0, dataPin, clockPin);
+      sendData(0, dataPin2, clockPin2);
     }
     digitalWrite(latchPin, HIGH);
+    digitalWrite(latchPin2, HIGH);
   }
 
   void ledDriver::ledOn() {
@@ -470,7 +473,7 @@ void ledDriver::setLEDColor(int r, int g, int b )
 void ledDriver::setLEDColor(int r, int g, int b, int nrLeds)
 {
     // Check if any of the color values are greater than 0
-    if (r > 0 || g > 0 || b > 0) {
+    //if (r > 0 || g > 0 || b > 0) {
         setDiag(true);
         digitalWrite(latchPin, LOW);
         for (int i = 0; i < nrLeds ; ++i) {
@@ -479,10 +482,10 @@ void ledDriver::setLEDColor(int r, int g, int b, int nrLeds)
             sendData(b, dataPin, clockPin);
         }
         digitalWrite(latchPin, HIGH);
-      }
-    else{
+      //}
+    //else{
         setDiag(false);
-      }   
+      //}   
 }
 /// this function uses coars and fine to get a 16bit color value 
 void ledDriver::setLEDColor16bit(int cR,int fR, int cG,int fG, int cB,int fB)
