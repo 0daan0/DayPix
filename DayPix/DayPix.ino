@@ -199,14 +199,14 @@ void setup() {
   String storedDeviceName = getStoredString(DEV_NAME_EEPROM_ADDR);
   int storedUniverseStart = getStoredString(UNIVERSE_START_EEPROM_ADDR).toInt();
   int storedUniverseEnd = getStoredString(UNIVERSE_END_EEPROM_ADDR).toInt();
-  int storedReverseArray = getStoredString(B_REVERSE_ARRAY_EEPROM_ADDR).toInt();
-  /*
-  int storedDHCP = getStoredInt(B_DHCP_EEPROM_ADDR);
+  String storedReverseArray = getStoredString(B_REVERSE_ARRAY_EEPROM_ADDR);
+  
+  String storedDHCP = getStoredString(B_DHCP_EEPROM_ADDR);
   String storedIP = getStoredString(IP_ADDR_EEPROM_ADDR);
   String storedSubnet = getStoredString(IP_SUBNET_EEPROM_ADDR);
   String storedGateway = getStoredString(IP_GATEWAY_EEPROM_ADDR);
   String storedDNS = getStoredString(IP_DNS_EEPROM_ADDR);
-*/
+
   // Set configuration parameters
   universe1 = storedUniverse.toInt();
   NrOfLeds = storedNrofLEDS.toInt();
@@ -214,9 +214,60 @@ void setup() {
   b_16Bit = storedB16Bit.toInt(); 
   b_failover = storedBfailover.toInt(); // Add this line
   b_silent = storedBsilent.toInt();
-  b_reverseArray = storedReverseArray;
+
+  b_dhcp = storedDHCP.toInt();
+  b_reverseArray = storedReverseArray.toInt();
+  IP_ADDR = storedIP;
+  IP_SUBNET = storedSubnet;
+  IP_GATEWAY = storedGateway;
+  IP_DNS = storedDNS;
   //b_dhcp = storedDHCP;
 
+
+  if (b_dhcp == 0)
+  {
+      Serial.println("Static IP configured..");
+
+      // Convert IP address from string to IPAddress object
+      IPAddress ip;
+      if (ip.fromString(IP_ADDR)) {
+          Serial.println("IP Address: "+ IP_ADDR);
+      } else {
+          Serial.println("Invalid IP address: " + IP_ADDR);
+      }
+
+      // Convert subnet from string to IPAddress object
+      IPAddress subnet;
+      if (subnet.fromString(IP_SUBNET)) {
+          Serial.println("Subnet Mask: " + IP_SUBNET);
+      } else {
+          Serial.println("Invalid Subnet Mask: " + IP_SUBNET);
+      }
+
+      // Convert gateway from string to IPAddress object
+      IPAddress gateway;
+      if (gateway.fromString(IP_GATEWAY)) {
+          Serial.println("Gateway: "+ IP_GATEWAY);
+      } else {
+          Serial.println("Invalid Gateway: " + IP_GATEWAY);
+      }
+
+      // Convert DNS from string to IPAddress object
+      IPAddress dns;
+      if (dns.fromString(IP_DNS)) {
+          Serial.println("DNS Server: " + IP_DNS);
+      } else {
+          Serial.println("Invalid DNS Server: " + IP_DNS);
+      }
+  #ifdef ETH_CAP
+       if(!ETH.config(ip, gateway, subnet, dns)){
+          Serial.println("Static IP Failed to configure");
+       };
+  #endif
+      if (!WiFi.config(ip, gateway, subnet, dns)) {
+          Serial.println("Static IP Failed to configure");
+      }
+  }
 
   // Set device name based on the last two digits of the MAC address if not been set by user
   if (storedDeviceName == "" || storedDeviceName == "null") {
@@ -235,26 +286,26 @@ void setup() {
   delay(100);
  
   // Print stored values for debugging
+  Serial.println("------------------------DEVICE-CONFIG-----------------------------");
   Serial.println("DEV_NAME: " + DEV_NAME);
   Serial.println("SSID: " + storedSSID);
   Serial.println("Password: " + storedPassword);
   Serial.println("nrOfLEDS: " + storedNrofLEDS);
   Serial.println("DMX Address: " + storedDmxAddr);
-  Serial.println("16BitMode: " + String(b_16Bit));
-  Serial.println("storedUniverseStart: " + storedUniverseStart);
-  Serial.println("storedUniverseEnd: " + storedUniverseEnd);
-  Serial.println("Silent: " + String(b_silent));
+  Serial.println("16BitMode: " + String(b_16Bit > 0 ? "True" : "False") +" : "+ String(b_16Bit));
+  Serial.println("Reverse DMX: " + String(b_reverseArray > 0 ? "True" : "False")+" : "+ String(b_reverseArray));
+  Serial.println("storedUniverseStart: " + String(storedUniverseStart));
+  Serial.println("storedUniverseEnd: " + String(storedUniverseEnd));
+  Serial.println("Silent: " + String(b_silent > 0 ? "True" : "False")+" : "+ String(b_silent));
   Serial.println("EthCap: " + String(led.ethCap));
-  Serial.println("EthCap: " + String(led.ethCap));
-/*
-if (!storedDHCP > 0){
-  Serial.println("IP: " + storedIP);
-  Serial.println("Subnet: " + storedSubnet);
-  Serial.println("Gateway: " + storedGateway);
-  Serial.println("DNS: " + storedDNS);
-  Serial.println("FallbackWifi: " + b_failover);
-}
-*/
+  Serial.println("DHCP: " + String(b_dhcp > 0 ? "True" : "False")+" : "+ String(b_dhcp));
+  Serial.println("Static IP: " + IP_ADDR);
+  Serial.println("Static Subnet: " + IP_SUBNET);
+  Serial.println("Static Gateway: " + IP_GATEWAY);
+  Serial.println("Static DNS: " + IP_DNS);
+  Serial.println("FallbackWifi: " + String(b_failover > 0 ? "True" : "False"));
+  Serial.println("------------------------------END--------------------------------");
+
   //Serial.println("DHCP: " + String(storedDHCP));
  
 

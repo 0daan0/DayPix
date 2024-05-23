@@ -596,12 +596,14 @@ if (led.ethCap){
 html += "Ethernet to Wifi Failover   : <input type='checkbox' id='failoverSwitch' name='b_failover' value='" + String(b_failover) + "' " + (b_failover ? "checked" : "") + " onclick='toggleSwitch(this)'/><label for='failoverSwitch'></label><br>";
 html += "<p>Failover mode will fallback to wifi when Ethernet is disconnected</p>";
 }
-/*
+
 // IP configuration section
 html += "<h3>IP Configuration</h3>";
 html += "<form action='/saveConfig' method='post'>";
-html += "Use DHCP: <input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(readBool(B_DHCP_EEPROM_ADDR) ? "checked" : "") + "><br>";
-html += "<div id='manualConfig' style='display: " + String(readBool(B_DHCP_EEPROM_ADDR) ? "none" : "block") + ";'>";
+html += "Use DHCP: <input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + "><br>";
+html += "<div id='manualConfig' style='display: " +  String(b_dhcp ? "none" : "block") + ";'>";
+  
+
 html += "IP Address: <input type='text' name='ipAddress' value='" +String(getStoredString(IP_ADDR_EEPROM_ADDR)) + "'><br>";
 html += "Subnet Mask: <input type='text' name='subnetMask' value='" + String(getStoredString(IP_SUBNET_EEPROM_ADDR)) + "'><br>";
 html += "Gateway: <input type='text' name='gateway' value='" + String(getStoredString(IP_GATEWAY_EEPROM_ADDR)) + "'><br>";
@@ -616,7 +618,7 @@ html += "document.getElementById('manualConfig').style.display = 'block';";
 html += "}";
 html += "});";
 html += "</script>";
-*/
+
 html += "</select><br>";
 html += "<div id='signalStrength'></div>";
 html += "<div id='signalMeter' style='max-width: 400px; border: 1px solid black;'></div>";  // Set max width to 400 pixels with a black border
@@ -925,6 +927,12 @@ void handleSave(AsyncWebServerRequest* request) {
   String devicename = request->arg("devicename");
   String universe_start = request->arg("universe_start");
   String universe_end = request->arg("universe_end");
+  String ipaddress = request->arg("ipAddress");
+  String subnet = request->arg("subnetMask");
+  String gateway = request->arg("gateway");
+  String dns = request->arg("dnsServer");
+    String b_dhcp = request->hasArg("b_dhcp") ? "1" : "0";
+  b_dhcp = b_dhcp.toInt();
   // Print values from memory
   // convert DMX addres for readability
   //int realDMX = dmx.toInt()-1;
@@ -944,6 +952,12 @@ void handleSave(AsyncWebServerRequest* request) {
   storeString(UNIVERSE_END_EEPROM_ADDR, universe_end);
   storeString(B_REVERSE_ARRAY_EEPROM_ADDR, b_reverseArray);
 
+  storeString(B_DHCP_EEPROM_ADDR, b_dhcp);
+  storeString(IP_ADDR_EEPROM_ADDR, ipaddress);
+  storeString(IP_SUBNET_EEPROM_ADDR, subnet);
+  storeString(IP_GATEWAY_EEPROM_ADDR, gateway);
+  storeString(IP_DNS_EEPROM_ADDR, dns);
+
   Serial.println("Received values from the web interface:");
   Serial.print("SSID: ");
   Serial.println(ssid);
@@ -957,7 +971,7 @@ void handleSave(AsyncWebServerRequest* request) {
   Serial.println(NrofLEDS);
   Serial.print("Device Name: ");
   Serial.println(devicename);
-    Serial.print("Art-Net Universe Start: ");
+  Serial.print("Art-Net Universe Start: ");
   Serial.println(universe_start);
   Serial.print("Art-Net Universe End: ");
   Serial.println(universe_end);
