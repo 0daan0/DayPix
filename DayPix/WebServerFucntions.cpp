@@ -593,16 +593,22 @@ html += "Device Name    : <input type='text' name='devicename' value='" + DEV_NA
 html += "WiFi SSID    : <input type='text' name='ssid' value='" + String(getStoredString(SSID_EEPROM_ADDR)) + "'><br>";
 html += "WiFi Password: <input type='password' name='password' value='" + String(getStoredString(PASS_EEPROM_ADDR)) + "'><br>";
 if (led.ethCap){
-html += "Ethernet to Wifi Failover   : <input type='checkbox' id='failoverSwitch' name='b_failover' value='" + String(b_failover) + "' " + (b_failover ? "checked" : "") + " onclick='toggleSwitch(this)'/><label for='failoverSwitch'></label><br>";
-html += "<p>Failover mode will fallback to wifi when Ethernet is disconnected</p>";
+    //html += "Ethernet to Wifi Failover   : <input type='hidden' name='b_failover' value='0'>";
+    html += "Ethernet to Wifi Failover  : <input type='checkbox' name='b_failover' " + String(b_failover ? "checked" : "") + " value='" + String(b_failover) +"'><br>";
+     //html += "<input type='checkbox' id='failoverSwitch' name='b_failover' value='1' " + String(b_failover ? "checked" : "") + " onclick='toggleSwitch(this)'/><label for='failoverSwitch'></label><br>";
+    html += "<p>Failover mode will fallback to wifi when Ethernet is disconnected</p>";
+    
+
+
 }
 
 // IP configuration section
 html += "<h3>IP Configuration</h3>";
 html += "<form action='/saveConfig' method='post'>";
-html += "Use DHCP: <input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + "><br>";
+
+html += "Use DHCP: <input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + " onclick='toggleDHCP(this)'><br>";
 html += "<div id='manualConfig' style='display: " +  String(b_dhcp ? "none" : "block") + ";'>";
-  
+
 
 html += "IP Address: <input type='text' name='ipAddress' value='" +String(getStoredString(IP_ADDR_EEPROM_ADDR)) + "'><br>";
 html += "Subnet Mask: <input type='text' name='subnetMask' value='" + String(getStoredString(IP_SUBNET_EEPROM_ADDR)) + "'><br>";
@@ -675,13 +681,32 @@ for (int i = 1; i <= 170; ++i) {
   }
   html += "<option value='" + String(i) + "' " + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
 }
-  html += "</select><br>";
-  html += "16-bit Mode   : <input type='checkbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + " value='" + String(b_16Bit) + "'><br>";
+html += "<select><br>";
+// Add your select options here
+html += "</select><br>";
+/*
+html += "16-bit Mode: <input type='hidden' name='b_16Bit' value='0'>";
+html += "<input type='checkbox' id='16BitCheckbox' name='b_16Bit' value='1' " + String(b_16Bit ? "checked" : "") + " onclick='toggleCheckbox(this)'><br>";
+html += "<p>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</p>";
+
+html += "Silent mode: <input type='hidden' name='b_silent' value='0'>";
+html += "<input type='checkbox' id='b_silentCheckbox' name='b_silent' value='1' " + String(b_silent ? "checked" : "") + " onclick='toggleCheckbox(this)'><br>";
+html += "<p>In silent mode no connection status is given on the LED outputs</p>";
+
+html += "Reverse DMX addresses: <input type='hidden' name='b_reverseArray' value='0'>";
+html += "<input type='checkbox' id='b_reverseArrayCheckbox' name='b_reverseArray' value='1' " + String(b_reverseArray ? "checked" : "") + " onclick='toggleCheckbox(this)'><br>";
+html += "<p>Reverse DMX addresses will address the pixels in reverse order</p>";
+*/
+  
+
+
+  html += "16-bit Mode   : <input type='checkbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + " value='" + String(b_16Bit) +"'><br>";
   html += "<p>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</p>";
   html += "Silent mode : <input type='checkbox' name='b_silent' " + String(b_silent ? "checked" : "") + " value='" + String(b_silent) + "'><br>";
   html += "<p>In silent mode no connection status is given on the LED outputs</p>";
   html += "Reverse DMX addresses : <input type='checkbox' name='b_reverseArray' " + String(b_reverseArray ? "checked" : "") + " value='" + String(b_reverseArray) + "'><br>";
   html += "<p>Reverse DMX addresses will address the pixels in reverse order</p>";
+
   html += "<p>Normal mode: Lowest address = first LED outwards from the controller</p>";
   html += "<p>Reverse mode: Highest address = first LED outwards from the controller</p>";
   html += "<p>NOTE: Default color space is BGR in reverse order this will be RGB</p>";
@@ -728,6 +753,9 @@ html += "}";
 html += "</script>";
 // Include the JavaScript code for fetching signal strength
 html += "<script>";
+html += "function toggleSwitch(element) {";
+html +=  "element.previousSibling.value = element.checked ? '1' : '0';";
+html += "}";
 html += "function updateSignalStrength() {";
 html += "var xhttp = new XMLHttpRequest();";
 html += "xhttp.onreadystatechange = function() {";
@@ -916,14 +944,27 @@ void handleSave(AsyncWebServerRequest* request) {
   String universe = request->arg("universe");
   String DmxAddr = request->arg("DmxAddr");
   String NrofLEDS = request->arg("NrofLEDS");
-  String b_16Bit = request->hasArg("b_16Bit") ? "1" : "0";
-  b_16Bit = b_16Bit.toInt();
-  String b_failover = request->hasArg("b_failover") ? "1" : "0";
-  b_failover = b_failover.toInt();
-    String b_silent = request->hasArg("b_silent") ? "1" : "0";
-  b_silent = b_silent.toInt();
-     String b_reverseArray = request->hasArg("b_reverseArray") ? "1" : "0";
-  b_reverseArray = b_reverseArray.toInt();
+    
+    String s_16Bit = "0";
+    s_16Bit = request->arg("b_16Bit") == "0" ? "1" : "0";
+    int b_16Bit_int = s_16Bit.toInt();
+    
+    String s_failover ="0";
+    s_failover = request->arg("b_failover") == "0" ? "1" : "0";
+    int b_failover_int = s_failover.toInt();
+    
+    String s_silent = "0";
+    s_silent = request->arg("b_silent") == "0" ? "1" : "0";
+    int b_silent_int = s_silent.toInt();
+    
+    String s_reverseArray = "0" ;
+    s_reverseArray = request->arg("b_reverseArray") == "1" ? "1" : "0";
+    int b_reverseArray_int = s_reverseArray.toInt();
+    
+    String s_dhcp ;
+    s_dhcp = request->arg("b_dhcp") == "on" ? "1" : "0";
+    int b_dhcp_int = s_dhcp.toInt();
+    
   String devicename = request->arg("devicename");
   String universe_start = request->arg("universe_start");
   String universe_end = request->arg("universe_end");
@@ -931,8 +972,7 @@ void handleSave(AsyncWebServerRequest* request) {
   String subnet = request->arg("subnetMask");
   String gateway = request->arg("gateway");
   String dns = request->arg("dnsServer");
-    String b_dhcp = request->hasArg("b_dhcp") ? "1" : "0";
-  b_dhcp = b_dhcp.toInt();
+
   // Print values from memory
   // convert DMX addres for readability
   //int realDMX = dmx.toInt()-1;
@@ -943,16 +983,16 @@ void handleSave(AsyncWebServerRequest* request) {
   storeString(UNIVERSE_EEPROM_ADDR, universe);
   storeString(DMX_ADDR_EEPROM_ADDR, DmxAddr);
   storeString(NRLEDS_EEPROM_ADDR, NrofLEDS);
-  storeString(B_16BIT_EEPROM_ADDR, b_16Bit);
-  storeString(B_FAILOVER_EEPROM_ADDR, b_failover);
-  storeString(B_SILENT_EEPROM_ADDR, b_silent);
-  storeString(B_REVERSE_ARRAY_EEPROM_ADDR, b_reverseArray);
+  storeString(B_16BIT_EEPROM_ADDR, s_16Bit);
+  storeString(B_FAILOVER_EEPROM_ADDR, s_failover);
+  storeString(B_SILENT_EEPROM_ADDR, s_silent);
+  storeString(B_REVERSE_ARRAY_EEPROM_ADDR, s_reverseArray);
   storeString(DEV_NAME_EEPROM_ADDR, devicename);
   storeString(UNIVERSE_START_EEPROM_ADDR, universe_start);
   storeString(UNIVERSE_END_EEPROM_ADDR, universe_end);
-  storeString(B_REVERSE_ARRAY_EEPROM_ADDR, b_reverseArray);
+  storeString(B_REVERSE_ARRAY_EEPROM_ADDR, s_reverseArray);
 
-  storeString(B_DHCP_EEPROM_ADDR, b_dhcp);
+  storeString(B_DHCP_EEPROM_ADDR, s_dhcp);
   storeString(IP_ADDR_EEPROM_ADDR, ipaddress);
   storeString(IP_SUBNET_EEPROM_ADDR, subnet);
   storeString(IP_GATEWAY_EEPROM_ADDR, gateway);

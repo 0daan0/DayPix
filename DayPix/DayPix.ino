@@ -135,7 +135,7 @@ void conGuardTask(void* parameter) {
 
     while (WiFi.status() != WL_CONNECTED){
       if (led.ethCap){
-        Serial.println("EthCAP check");
+        Serial.println("Not Connected to wifi and ethernet .. will reboot");
         if(!ETH.linkUp()){
           ESP.restart();
         }
@@ -144,7 +144,7 @@ void conGuardTask(void* parameter) {
     }
     while(WiFi.status() == WL_CONNECTED){
       if (led.ethCap){
-               Serial.println("EthCAP check");
+               //Serial.println("EthCAP check");
         if (ETH.linkUp()){
           ESP.restart();
         }
@@ -226,26 +226,32 @@ void setup() {
 
   if (b_dhcp == 0)
   {
+    bool bValid = false;
       Serial.println("Static IP configured..");
 
       // Convert IP address from string to IPAddress object
       IPAddress ip;
+      IPAddress subnet;
+      IPAddress gateway;
+      IPAddress dns;
       if (ip.fromString(IP_ADDR)) {
           Serial.println("IP Address: "+ IP_ADDR);
+           // Convert subnet from string to IPAddress object
+          
+          if (subnet.fromString(IP_SUBNET)) {
+              Serial.println("Subnet Mask: " + IP_SUBNET);
+              bValid = true;
+          } else {
+              Serial.println("Invalid Subnet Mask: " + IP_SUBNET);
+          }
+
       } else {
           Serial.println("Invalid IP address: " + IP_ADDR);
       }
 
-      // Convert subnet from string to IPAddress object
-      IPAddress subnet;
-      if (subnet.fromString(IP_SUBNET)) {
-          Serial.println("Subnet Mask: " + IP_SUBNET);
-      } else {
-          Serial.println("Invalid Subnet Mask: " + IP_SUBNET);
-      }
-
+     
       // Convert gateway from string to IPAddress object
-      IPAddress gateway;
+      
       if (gateway.fromString(IP_GATEWAY)) {
           Serial.println("Gateway: "+ IP_GATEWAY);
       } else {
@@ -253,19 +259,21 @@ void setup() {
       }
 
       // Convert DNS from string to IPAddress object
-      IPAddress dns;
+
       if (dns.fromString(IP_DNS)) {
           Serial.println("DNS Server: " + IP_DNS);
       } else {
           Serial.println("Invalid DNS Server: " + IP_DNS);
       }
-  #ifdef ETH_CAP
-       if(!ETH.config(ip, gateway, subnet, dns)){
-          Serial.println("Static IP Failed to configure");
-       };
-  #endif
-      if (!WiFi.config(ip, gateway, subnet, dns)) {
-          Serial.println("Static IP Failed to configure");
+      if (bValid){
+    #ifdef ETH_CAP
+        if(!ETH.config(ip, gateway, subnet, dns)){
+            Serial.println("Static IP Failed to configure");
+        };
+    #endif
+        if (!WiFi.config(ip, gateway, subnet, dns)) {
+            Serial.println("Static IP Failed to configure");
+        }
       }
   }
 
