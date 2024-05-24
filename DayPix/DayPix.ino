@@ -21,6 +21,13 @@ ArtnetReceiver artnet;
 #include <ArtnetWiFi.h>
 ArtnetWiFiReceiver artnet;
 #endif
+// DMX array data
+const uint8_t* bdata;
+uint16_t bsize;
+
+const uint8_t* bdata2;
+uint16_t bsize2;
+
 
 ledDriver led;
 RGBEffects effect;
