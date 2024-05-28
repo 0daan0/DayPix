@@ -3,12 +3,24 @@
 #include <FS.h>
 #include <EEPROM.h>
 #include "config.h"
+#include "WebServerFunctions.h"
 
 // reset watchdog timer
 void rstWdt(){
    esp_task_wdt_reset();
 }
+void resetToDefault(){
+  storeString(B_16BIT_EEPROM_ADDR, String(b_16Bit));
+  storeString(B_FAILOVER_EEPROM_ADDR, String(b_failover));
+  storeString(B_SILENT_EEPROM_ADDR, String(b_silent));
+  storeString(B_REVERSE_ARRAY_EEPROM_ADDR, String(b_reverseArray));
 
+  storeString(B_DHCP_EEPROM_ADDR, String(b_dhcp));
+  storeString(IP_ADDR_EEPROM_ADDR, IP_ADDR);
+  storeString(IP_SUBNET_EEPROM_ADDR, IP_SUBNET);
+  storeString(IP_GATEWAY_EEPROM_ADDR, IP_GATEWAY);
+  storeString(IP_DNS_EEPROM_ADDR, IP_DNS);
+}
 // Function to initialize EEPROM if not already initialized
 void initializeEEPROM() {
   // Read the value at the initialization address
@@ -22,7 +34,8 @@ void initializeEEPROM() {
       }
     EEPROM.write(INIT_MARKER_ADDR, INIT_MARKER);
     // Commit the changes to EEPROM
-    EEPROM.commit();
+  EEPROM.commit(); 
+  resetToDefault();
   }
 }
 
@@ -34,6 +47,7 @@ void setupHw(){
     return;
   }
 }
+
 
 void reset(){
    ESP.restart();
