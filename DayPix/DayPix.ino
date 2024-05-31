@@ -133,9 +133,32 @@ void setup() {
   Serial.begin(115200);
   
   // WHY THIS DELAY?
-  delay(1000);
+  delay(500);
 
   Serial.println("Starting setup...");
+
+  #ifdef RST_BTN
+  pinMode(IO5, OUTPUT);
+  pinMode(IO17, OUTPUT);
+  pinMode(led.reset_Button, INPUT_PULLUP);
+  delay(100);
+   if (digitalRead(led.reset_Button) == LOW)
+   {
+    Serial.println("Reset to default pressed");
+    digitalWrite(IO5, HIGH);
+    resetToDefault();
+    delay(1000);
+    for (int i = 15; i >= 0; i--) 
+    {
+    digitalWrite(IO17, HIGH);
+    delay(50);
+    digitalWrite(IO17, LOW);
+    delay(50);
+    }
+    
+   }
+  #endif
+
   // init eeprom
   EEPROM.begin(512);
   initializeEEPROM();
@@ -396,5 +419,22 @@ void setup() {
 void loop() {
   while (!diag){
      artnet.parse();
+  #ifdef RST_BTN
+  pinMode(IO5, OUTPUT);
+  pinMode(IO17, OUTPUT);
+  digitalWrite(IO5, LOW);
+  digitalWrite(IO17, HIGH);
+   pinMode(led.reset_Button, INPUT_PULLUP);
+   if (digitalRead(led.reset_Button) == HIGH)
+   {
+    Serial.println("Reset to default released");
+   }
+   else if (digitalRead(led.reset_Button) == LOW)
+   {
+      digitalWrite(IO5, HIGH);
+      digitalWrite(IO17, LOW);
+   }
+  
+  #endif
   }
 }
