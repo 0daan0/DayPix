@@ -9,17 +9,46 @@
 void rstWdt(){
    esp_task_wdt_reset();
 }
-void resetToDefault(){
-  storeString(B_16BIT_EEPROM_ADDR, String(b_16Bit));
-  storeString(B_FAILOVER_EEPROM_ADDR, String(b_failover));
-  storeString(B_SILENT_EEPROM_ADDR, String(b_silent));
-  storeString(B_REVERSE_ARRAY_EEPROM_ADDR, String(b_reverseArray));
 
-  storeString(B_DHCP_EEPROM_ADDR, String(b_dhcp));
-  storeString(IP_ADDR_EEPROM_ADDR, IP_ADDR);
-  storeString(IP_SUBNET_EEPROM_ADDR, IP_SUBNET);
-  storeString(IP_GATEWAY_EEPROM_ADDR, IP_GATEWAY);
-  storeString(IP_DNS_EEPROM_ADDR, IP_DNS);
+void writeConfigFile() {
+  File configFile = SPIFFS.open("/config.cfg", "w");
+  if (!configFile) {
+    Serial.println("Failed to open config file for writing");
+    return;
+  }
+
+  // Write configuration data to the file
+  configFile.println(String("SSID=") + getStoredString(SSID_EEPROM_ADDR));
+  configFile.println(String("Password=") +  getStoredString(PASS_EEPROM_ADDR));
+  configFile.println(String("DeviceName=") + getStoredString(DEV_NAME_EEPROM_ADDR));
+  // TODO: extend with all config
+  configFile.close();
+  Serial.println("Config file written successfully");
+}
+
+void resetToDefault(){
+  Serial.println("Backup config to filesystem before reset to default");
+  writeConfigFile();
+
+  storeString(SSID_EEPROM_ADDR, "");
+  storeString(PASS_EEPROM_ADDR, "");
+  storeString(UNIVERSE_EEPROM_ADDR, "0");
+  storeString(DMX_ADDR_EEPROM_ADDR, "0");
+  storeString(NRLEDS_EEPROM_ADDR, "13");
+  storeString(DEV_NAME_EEPROM_ADDR, "");
+  storeString(UNIVERSE_START_EEPROM_ADDR, "0");
+  storeString(UNIVERSE_END_EEPROM_ADDR, "0");
+
+  storeString(B_16BIT_EEPROM_ADDR, String(0));
+  storeString(B_FAILOVER_EEPROM_ADDR, String(0));
+  storeString(B_SILENT_EEPROM_ADDR, String(0));
+  storeString(B_REVERSE_ARRAY_EEPROM_ADDR, String(0));
+
+  storeString(B_DHCP_EEPROM_ADDR, String(1));
+  storeString(IP_ADDR_EEPROM_ADDR, "192.168.0.10");
+  storeString(IP_SUBNET_EEPROM_ADDR, "255.255.255.0");
+  storeString(IP_GATEWAY_EEPROM_ADDR, "0.0.0.0");
+  storeString(IP_DNS_EEPROM_ADDR, "0.0.0.0");
 }
 // Function to initialize EEPROM if not already initialized
 void initializeEEPROM() {
@@ -38,6 +67,7 @@ void initializeEEPROM() {
   resetToDefault();
   }
 }
+
 
 
 void setupHw(){

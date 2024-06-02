@@ -28,36 +28,40 @@ uint16_t bsize;
 const uint8_t* bdata2;
 uint16_t bsize2;
 
-
 ledDriver led;
 RGBEffects effect;
+#ifdef RST_BTN
+ int rLED = IO5;
+ int sLED = IO17;
+
+#endif
 
 void callback(const uint8_t* data, const uint16_t size) {    
-  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-      // The recvUniverse does not contain artnet.universe(), so add it
-      recvUniverse += "U" + String(artnet.universe()) + "U";
-    }
+  // if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
+  //     // The recvUniverse does not contain artnet.universe(), so add it
+  //     recvUniverse += "U" + String(artnet.universe()) + "U";
+  //   }
   led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
 }
 
 void callback1(const uint8_t* data, const uint16_t size) {
- if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-      recvUniverse += "U" + String(artnet.universe()) + "U";
-  }
+//  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
+//       recvUniverse += "U" + String(artnet.universe()) + "U";
+//   }
   led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
 }
 
 void callback2(const uint8_t* data, const uint16_t size) {
-  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-      recvUniverse += "U" + String(artnet.universe()) + "U";
-  }
+  // if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
+  //     recvUniverse += "U" + String(artnet.universe()) + "U";
+  // }
   led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
 
 }
 void callback3(const uint8_t* data, const uint16_t size) {
-  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-      recvUniverse += "U" + String(artnet.universe()) + "U";
-  }
+  // if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
+  //     recvUniverse += "U" + String(artnet.universe()) + "U";
+  // }
   led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
 }
 
@@ -66,14 +70,8 @@ void artnetTask(void* parameter) {
   while (1) {
 
     vTaskDelay(10 / portTICK_PERIOD_MS);  // Adjust delay as needed
-
-    if (identify) {
-      delay(2000);
-      identify = false;
-    }
-    while (diag) {
-      //do nothing since we are in diag mode
-      delay(500);
+    while (!diag){
+        artnet.parse();
     }
   }
 }
@@ -101,8 +99,9 @@ void conGuardTask(void* parameter) {
 
     while (WiFi.status() != WL_CONNECTED){
       if (led.ethCap){
-        Serial.println("Not Connected to wifi and ethernet .. will reboot");
+    
         if(!ETH.linkUp()){
+          Serial.println("Not Connected to wifi and ethernet .. will reboot");
           ESP.restart();
         }
       }
@@ -136,36 +135,94 @@ void setup() {
   delay(500);
 
   Serial.println("Starting setup...");
-
-  #ifdef RST_BTN
-  pinMode(IO5, OUTPUT);
-  pinMode(IO17, OUTPUT);
-  pinMode(led.reset_Button, INPUT_PULLUP);
-  delay(100);
-   if (digitalRead(led.reset_Button) == LOW)
-   {
-    Serial.println("Reset to default pressed");
-    digitalWrite(IO5, HIGH);
-    resetToDefault();
-    delay(1000);
-    for (int i = 15; i >= 0; i--) 
-    {
-    digitalWrite(IO17, HIGH);
-    delay(50);
-    digitalWrite(IO17, LOW);
-    delay(50);
-    }
-    
-   }
-  #endif
-
+  
   // init eeprom
   EEPROM.begin(512);
   initializeEEPROM();
+  setupHw();
+
+#ifdef RST_BTN
+// Reset to default at startup button press
+const int debounceDelay = 50; // debounce delay in milliseconds
+const int stablePressDuration = 200; // minimum duration the button should be pressed to consider it a valid press in milliseconds
+const int longPressDuration = 10000; // duration the button needs to be pressed in the second stage (10 seconds)
+unsigned long lastDebounceTime = 0; // the last time the output pin was toggled
+int lastButtonState = HIGH; // the previous reading from the input pin
+bool buttonPressed = false;
+bool longPressDetected = false;
+
+pinMode(rLED, OUTPUT);
+pinMode(sLED, OUTPUT);
+digitalWrite(rLED, LOW);
+digitalWrite(sLED, HIGH);
+pinMode(led.reset_Button, INPUT_PULLUP);
+delay(100);
+
+unsigned long startTime = millis();
+
+// Initial debounce check for 2 seconds during startup
+while (millis() - startTime < 2000) {
+  int reading = digitalRead(led.reset_Button);
+  
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading == LOW && (millis() - lastDebounceTime) > stablePressDuration) {
+      buttonPressed = true;
+      break;
+    }
+  }
+  
+  lastButtonState = reading;
+  delay(10);
+}
+
+if (buttonPressed) {
+  Serial.println("Initial button press detected. Hold for 10 seconds to reset.");
+  digitalWrite(rLED, HIGH); // Indicate that we are in the second stage
+  lastDebounceTime = millis(); // Reset the debounce timer for the second stage
+  unsigned long pressStartTime = millis();
+  
+  while ((millis() - pressStartTime) < longPressDuration) {
+    int reading = digitalRead(led.reset_Button);
+    
+    if (reading == HIGH) {
+      // Button released, exit the second stage
+      Serial.println("Button released before 10 seconds. Continuing setup.");
+      digitalWrite(rLED, LOW);
+      buttonPressed = false;
+      break;
+    }
+
+    delay(10);
+  }
+
+  if (buttonPressed) {
+    longPressDetected = true;
+  }
+}
+
+if (longPressDetected) {
+  Serial.println("Reset to default pressed");
+  digitalWrite(rLED, HIGH);
+  resetToDefault();
+  delay(1000);
+  for (int i = 15; i >= 0; i--) {
+    digitalWrite(sLED, HIGH);
+    delay(200);
+    digitalWrite(sLED, LOW);
+    delay(200);
+  }
+} else {
+  Serial.println("Setup complete without reset.");
+}
+#endif
 
   // init ethernet of device is capable
   #ifdef ETH_CAP
-  ETH.begin();
+   ETH.begin();
   #endif
 // #region Retrieve stored configuration
   
@@ -347,10 +404,10 @@ void setup() {
   }
   // if connected start connection guard task to ensure we are alwasy able to connect.
   #ifdef ETH_CAP
-  if (b_failover > 0)
-  {
-      xTaskCreatePinnedToCore(conGuardTask, "ConGuardTask", 2048, NULL, 3, NULL, 1);
-  }
+    if (b_failover > 0)
+    {
+        xTaskCreatePinnedToCore(conGuardTask, "ConGuardTask", 2048, NULL, 3, NULL, 1);
+    }
   #endif
   MDNS.begin(HOST_NAME.c_str());
   MDNS.disableArduino();
@@ -370,7 +427,7 @@ void setup() {
 // #region ArtNet init
   // Create FreeRTOS task for ArtNet updates on core 1
   Serial.println("Starting ArtNet");
-  //xTaskCreatePinnedToCore(artnetTask, "ArtnetTask", 8192, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(artnetTask, "ArtnetTask", 8192, NULL, 1, NULL, 1);
  // xTaskCreatePinnedToCore(artnetTask2, "ArtnetTask2", 8192, NULL, 1, NULL, 1);
   // Set Artnet discovery name
   artnet.shortname(HOST_NAME);
@@ -410,31 +467,36 @@ void setup() {
 
   xTaskCreatePinnedToCore(otaTask, "OtaTask", 8192, NULL, 2, NULL, 1);
   Serial.println("Setup complete");
-  
+#ifdef RST_BTN
+ digitalWrite(sLED, LOW);
+#endif
 }
 
 
 
 // Main loop does nothing
 void loop() {
-  while (!diag){
-     artnet.parse();
-  #ifdef RST_BTN
-  pinMode(IO5, OUTPUT);
-  pinMode(IO17, OUTPUT);
-  digitalWrite(IO5, LOW);
-  digitalWrite(IO17, HIGH);
-   pinMode(led.reset_Button, INPUT_PULLUP);
-   if (digitalRead(led.reset_Button) == HIGH)
+  // while (!diag){
+  //    artnet.parse();
+  // set onboard leds
+#ifdef RST_BTN
+  digitalWrite(rLED, HIGH);
+#endif
+  delay(100);
+#ifdef RST_BTN
+  digitalWrite(rLED, LOW);
+
+  pinMode(led.reset_Button, INPUT_PULLUP);
+   
+   if (digitalRead(led.reset_Button) == LOW)
    {
-    Serial.println("Reset to default released");
+      Serial.println("Reset pressed.. rebooting");         
+      digitalWrite(rLED, HIGH);
+      digitalWrite(sLED, LOW);
+      ESP.restart();
    }
-   else if (digitalRead(led.reset_Button) == LOW)
-   {
-      digitalWrite(IO5, HIGH);
-      digitalWrite(IO17, LOW);
-   }
+   delay(100);
+
   
-  #endif
-  }
+#endif
 }

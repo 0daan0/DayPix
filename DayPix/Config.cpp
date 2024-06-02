@@ -32,7 +32,7 @@ String DEV_NAME = "";
 String HOST_NAME;
 const char* www_username = "admin";
 const char* www_password = "admin";
-String FIRMWARE_VERSION = "1.2.0";
+String FIRMWARE_VERSION = "1.2.1";
 float GAMMA_CORRECTION = 1.8;
 const char* APpass = "setupdaypix";
 

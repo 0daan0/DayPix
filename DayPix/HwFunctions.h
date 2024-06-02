@@ -10,4 +10,5 @@ void listFiles(fs::FS &fs, const char *dirname);
 void setupHw();
 void initializeEEPROM();
 void resetToDefault();
+void writeConfigFile();
 #endif
