@@ -75,6 +75,8 @@ public:
     #define ETH_CAP
     bool ethCap = true;
     const char* hwVersion = "DP2P.WL.ETH.LX6";
+    #define RST_BTN
+    int reset_Button = IO39;
     // Add pins for ESP_ETH01 if needed
 #endif
   int NumberOfLeds;
