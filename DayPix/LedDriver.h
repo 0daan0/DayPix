@@ -32,7 +32,7 @@ public:
   void showBufferP2();
   void blankLEDS(int nrToblank);
   void ledOn();
-  void blink(int nrs);
+  void blink(int nrs, int delayTime);
   void _8bTest();
   void _16bTest();
   void rgbEffect(void* parameter);

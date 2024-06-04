@@ -22,6 +22,7 @@ int b_reverseArray = 0;
 int b_dhcp = 1;
 bool identify = false;
 bool diag = false;
+int wifi_attempts = 15;
 String IP_ADDR = "192.168.1.123";
 String IP_SUBNET = "255.255.255.0";
 String IP_GATEWAY = "192.168.1.1";
@@ -32,7 +33,7 @@ String DEV_NAME = "";
 String HOST_NAME;
 const char* www_username = "admin";
 const char* www_password = "admin";
-String FIRMWARE_VERSION = "1.2.1";
+String FIRMWARE_VERSION = "1.2.2";
 float GAMMA_CORRECTION = 1.8;
 const char* APpass = "setupdaypix";
 

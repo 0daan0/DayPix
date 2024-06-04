@@ -11,7 +11,7 @@ void rstWdt(){
 }
 
 void writeConfigFile() {
-  File configFile = SPIFFS.open("/config.cfg", "w");
+  File configFile = SPIFFS.open("/config.cfg", FILE_WRITE, true);
   if (!configFile) {
     Serial.println("Failed to open config file for writing");
     return;
@@ -40,13 +40,13 @@ void resetToDefault(){
   storeString(UNIVERSE_END_EEPROM_ADDR, "0");
 
   storeString(B_16BIT_EEPROM_ADDR, String(0));
-  storeString(B_FAILOVER_EEPROM_ADDR, String(0));
+  storeString(B_FAILOVER_EEPROM_ADDR, String(1));
   storeString(B_SILENT_EEPROM_ADDR, String(0));
   storeString(B_REVERSE_ARRAY_EEPROM_ADDR, String(0));
 
-  storeString(B_DHCP_EEPROM_ADDR, String(1));
-  storeString(IP_ADDR_EEPROM_ADDR, "192.168.0.10");
-  storeString(IP_SUBNET_EEPROM_ADDR, "255.255.255.0");
+  storeString(B_DHCP_EEPROM_ADDR, String(0));
+  storeString(IP_ADDR_EEPROM_ADDR, "2.0.0.1");
+  storeString(IP_SUBNET_EEPROM_ADDR, "255.0.0.0");
   storeString(IP_GATEWAY_EEPROM_ADDR, "0.0.0.0");
   storeString(IP_DNS_EEPROM_ADDR, "0.0.0.0");
 }

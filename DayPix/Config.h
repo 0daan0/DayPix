@@ -43,6 +43,7 @@ extern const char* www_username;
 extern const char* www_password;
 extern float GAMMA_CORRECTION; 
 extern const char* APpass;
+extern int wifi_attempts;
 
 void setDiag(bool value);
 void setSilent(int value);

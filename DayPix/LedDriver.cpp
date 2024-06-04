@@ -583,20 +583,21 @@ void ledDriver::setLEDColor16bit(int r ,int g, int b)
     }
 
   }
-  void ledDriver::blink(int nrs){
-    for (int i = 0; i < 1; i++){
-      blankLEDS(179);
-      delay(1000);
-   
-      digitalWrite(latchPin, LOW);
-      int nrBlank = (NumberOfLeds - 1) * 3;
-      for (int j = 0; j < nrBlank; ++j) {
-        sendData(0, dataPin, clockPin);
-      }
+  void ledDriver::blink(int nrs, int delayTime){
+    blankLEDS(179);
+    digitalWrite(latchPin, LOW);
+    int nrBlank = (NumberOfLeds - 1) * 3;
+    for (int j = 0; j < nrBlank; ++j) {
+      sendData(0, dataPin, clockPin);
+    }
+    for (int j = nrs; j > 0; --j) {
       sendData(255, dataPin, clockPin);
-      digitalWrite(latchPin, HIGH);
-      
-   }
+      sendData(0, dataPin, clockPin);
+      sendData(0, dataPin, clockPin);
+    }
+    digitalWrite(latchPin, HIGH);
+    delay(delayTime);
+    blankLEDS(179);
  }
   
 void ledDriver::cFlash() {

@@ -97,13 +97,13 @@ void applyLEDEffectFromFileTask(void *parameter) {
 }
 
 void setupWebServer() {
-   if (SPIFFS.begin(true)) {
-    Serial.println("mounted SPIFFS");
+  //  if (SPIFFS.begin(true)) {
+  //   Serial.println("mounted SPIFFS");
     
-  }
-  else{
-       Serial.println("ERROR:mounting SPIFFS");
-  }
+  // }
+  // else{
+  //      Serial.println("ERROR:mounting SPIFFS");
+  // }
     // Set up endpoints for web server
   server.on("/diagnostic", HTTP_GET, handleDiagnostic);
   server.on("/8bitTest", HTTP_POST, handle8BitTest);
@@ -225,19 +225,39 @@ void setupWebServer() {
     request->send(200, "text/html", css+response);
     });
 
- server.onFileUpload([](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+ // Handle file upload
+  server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {},
+  [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     static File uploadFile;
-    if (!index) { // Start of upload
+    if (index == 0) { // Start of upload
+      Serial.printf("Upload Start: %s\n", filename.c_str());
       uploadFile = SPIFFS.open("/" + filename, FILE_WRITE);
+      if (!uploadFile) {
+        Serial.println("Failed to open file for writing");
+        request->send(500, "text/plain", "Failed to open file for writing");
+        return;
+      }
     }
-    for (size_t i = 0; i < len; i++) {
-      uploadFile.write(data[i]);
+    if (uploadFile) {
+      if (uploadFile.write(data, len) != len) {
+        Serial.println("Write failed");
+        uploadFile.close();
+        request->send(500, "text/plain", "Write failed");
+        return;
+      }
     }
     if (final) { // End of upload
-      uploadFile.close();
-      request->send(200, "text/plain", "File uploaded successfully");
+      if (uploadFile) {
+        uploadFile.close();
+        Serial.printf("Upload End: %s\n", filename.c_str());
+        request->send(200, "text/plain", "File uploaded successfully");
+      } else {
+        Serial.println("Failed to close file");
+        request->send(500, "text/plain", "Failed to close file");
+      }
     }
   });
+
 
  // Serve static files
   server.serveStatic("/", SPIFFS, "/");
@@ -491,12 +511,13 @@ server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
 
 // Definition of handleFileUpload function
 void handleFileUpload(AsyncWebServerRequest *request) {
+   Serial.println("File:UPLOAD");
     AsyncWebServerResponse *response;
     if(request->hasParam("file", true, true)) {
         AsyncWebParameter* file = request->getParam("file", true, true);
         String filename = file->name(); // Use name() instead of filename()
-
-        File f = SPIFFS.open("/" + filename, "w");
+        Serial.println("File:"+filename+ "Recived");
+        File f = SPIFFS.open("/" + filename, FILE_WRITE, true);
         if(f) {
             f.write((const uint8_t*)file->value().c_str(), file->value().length());
             f.close();
@@ -815,6 +836,7 @@ html += "</body></html>";
 }
 
 void handleReboot(AsyncWebServerRequest* request) {
+  loginUser(request);
   request->send(200, "text/plain", "Rebooting...");
   delay(1000);
   ESP.restart();
@@ -977,7 +999,7 @@ void handleSave(AsyncWebServerRequest* request) {
   // convert DMX addres for readability
   //int realDMX = dmx.toInt()-1;
   //String DmxAddr = String(realDMX);
-
+  writeConfigFile();
   storeString(SSID_EEPROM_ADDR, ssid);
   storeString(PASS_EEPROM_ADDR, password);
   storeString(UNIVERSE_EEPROM_ADDR, universe);
@@ -1174,9 +1196,9 @@ void startAccessPoint(bool waitForClient) {
   setupWebServer();
 
    // Add the following lines to configure the captive portal
-    server.addHandler(new AsyncCallbackJsonWebHandler("/config", [](AsyncWebServerRequest *request, JsonVariant &json) {
+    //server.addHandler(new AsyncCallbackJsonWebHandler("/config", [](AsyncWebServerRequest *request, JsonVariant &json) {
     // Your existing configuration handling code
-  }));
+  //}));
   // Add the following lines to handle captive portal requests
   server.onNotFound([](AsyncWebServerRequest *request) {
     if (!request->host().equalsIgnoreCase(WiFi.softAPIP().toString())) {

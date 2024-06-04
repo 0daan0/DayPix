@@ -100,7 +100,7 @@ void conGuardTask(void* parameter) {
     while (WiFi.status() != WL_CONNECTED){
       if (led.ethCap){
     
-        if(!ETH.linkUp()){
+        if(!ETH.linkUp() && !b_APmode){
           Serial.println("Not Connected to wifi and ethernet .. will reboot");
           ESP.restart();
         }
@@ -145,7 +145,7 @@ void setup() {
 // Reset to default at startup button press
 const int debounceDelay = 50; // debounce delay in milliseconds
 const int stablePressDuration = 200; // minimum duration the button should be pressed to consider it a valid press in milliseconds
-const int longPressDuration = 10000; // duration the button needs to be pressed in the second stage (10 seconds)
+//const int longPressDuration = 10000; // duration the button needs to be pressed in the second stage (10 seconds)
 unsigned long lastDebounceTime = 0; // the last time the output pin was toggled
 int lastButtonState = HIGH; // the previous reading from the input pin
 bool buttonPressed = false;
@@ -161,7 +161,7 @@ delay(100);
 unsigned long startTime = millis();
 
 // Initial debounce check for 2 seconds during startup
-while (millis() - startTime < 2000) {
+while (millis() - startTime < 500) {
   int reading = digitalRead(led.reset_Button);
   
   if (reading != lastButtonState) {
@@ -180,12 +180,12 @@ while (millis() - startTime < 2000) {
 }
 
 if (buttonPressed) {
-  Serial.println("Initial button press detected. Hold for 10 seconds to reset.");
+  Serial.println("Initial button press detected. Hold for 10 seconds to reset to default.");
   digitalWrite(rLED, HIGH); // Indicate that we are in the second stage
   lastDebounceTime = millis(); // Reset the debounce timer for the second stage
   unsigned long pressStartTime = millis();
-  
-  while ((millis() - pressStartTime) < longPressDuration) {
+  int i = 13;
+  while (i > 0) {
     int reading = digitalRead(led.reset_Button);
     
     if (reading == HIGH) {
@@ -195,8 +195,9 @@ if (buttonPressed) {
       buttonPressed = false;
       break;
     }
-
-    delay(10);
+    led.blink(i,0);
+    i--;
+    delay(500);
   }
 
   if (buttonPressed) {
@@ -205,19 +206,17 @@ if (buttonPressed) {
 }
 
 if (longPressDetected) {
-  Serial.println("Reset to default pressed");
   digitalWrite(rLED, HIGH);
   resetToDefault();
-  delay(1000);
-  for (int i = 15; i >= 0; i--) {
+  Serial.println("Reset to default DONE!");
+  for (int i = 20; i >= 0; i--) {
     digitalWrite(sLED, HIGH);
-    delay(200);
+    led.blink(1,20);
+    delay(10);
     digitalWrite(sLED, LOW);
-    delay(200);
+    delay(10);
   }
-} else {
-  Serial.println("Setup complete without reset.");
-}
+} 
 #endif
 
   // init ethernet of device is capable
@@ -303,9 +302,9 @@ if (longPressDetected) {
             Serial.println("Static IP Failed to configure");
         };
       #endif
-        if (!WiFi.config(ip, gateway, subnet, dns)) {
-            Serial.println("Static IP Failed to configure");
-        }
+        //if (!WiFi.config(ip, gateway, subnet, dns)) {
+        //    Serial.println("Static IP Failed to configure");
+        //}
       }
   }
   
@@ -354,7 +353,7 @@ if (longPressDetected) {
   led.initialize(NrOfLeds, DmxAddr);
 // #region Networking and webserver setup
   Serial.println("Nework setup start");
-  if (led.ethCap) {
+  // if ethernet capable device start ethernet
   #ifdef ETH_CAP
     Serial.println("Ethernet capable.. checking connection");
     if(ETH.linkUp()) {
@@ -362,7 +361,7 @@ if (longPressDetected) {
       Serial.println(ETH.localIP());
     }
   #endif
-  } else {
+    else {
     Serial.println("Ethernet not connected starting wifi");
     // Start Access Point if no stored WiFi credentials
     if (storedSSID.isEmpty() || storedPassword.isEmpty()) {
@@ -373,10 +372,10 @@ if (longPressDetected) {
       WiFi.begin(storedSSID.c_str(), storedPassword.c_str());
       // Attempt to connect with a timeout
       int attempts = 0;
-      while (WiFi.status() != WL_CONNECTED && attempts < WIFI_ATTEMPT) {
+      while (WiFi.status() != WL_CONNECTED && attempts < wifi_attempts) {
         if (!b_silent > 0)
         {
-          led.blink(1);
+          led.blink(1,1000);
         }
         delay(1000);
         Serial.println("Connecting to WiFi...");
@@ -393,7 +392,7 @@ if (longPressDetected) {
       // If not connected, start Access Point and setup
       if (WiFi.status() != WL_CONNECTED) {
         WiFi.disconnect(false);
-        //startAccessPoint(true);
+        startAccessPoint(true);
       } else {
         Serial.println("Connected to WiFi");
         Serial.println(WiFi.localIP());
@@ -413,8 +412,10 @@ if (longPressDetected) {
   MDNS.disableArduino();
   // add Http service to mdns
   MDNS.addService("http", "tcp", 80);
-  // Setup webserver
+  // Setup webserver if we are not in AP mode
+  if (!b_APmode){
   setupWebServer();
+  }
   // display led effect when connected
   if (!b_silent > 0)
   {
