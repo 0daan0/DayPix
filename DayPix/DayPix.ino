@@ -37,31 +37,31 @@ RGBEffects effect;
 #endif
 
 void callback(const uint8_t* data, const uint16_t size) {    
-  // if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-  //     // The recvUniverse does not contain artnet.universe(), so add it
-  //     recvUniverse += "U" + String(artnet.universe()) + "U";
-  //   }
+  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
+      // The recvUniverse does not contain artnet.universe(), so add it
+      recvUniverse += "U" + String(artnet.universe()) + "U";
+    }
   led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
 }
 
 void callback1(const uint8_t* data, const uint16_t size) {
-//  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-//       recvUniverse += "U" + String(artnet.universe()) + "U";
-//   }
+ if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
+      recvUniverse += "U" + String(artnet.universe()) + "U";
+  }
   led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
 }
 
 void callback2(const uint8_t* data, const uint16_t size) {
-  // if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-  //     recvUniverse += "U" + String(artnet.universe()) + "U";
-  // }
+  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
+      recvUniverse += "U" + String(artnet.universe()) + "U";
+  }
   led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
 
 }
 void callback3(const uint8_t* data, const uint16_t size) {
-  // if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-  //     recvUniverse += "U" + String(artnet.universe()) + "U";
-  // }
+  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
+      recvUniverse += "U" + String(artnet.universe()) + "U";
+  }
   led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
 }
 
@@ -302,9 +302,9 @@ if (longPressDetected) {
             Serial.println("Static IP Failed to configure");
         };
       #endif
-        //if (!WiFi.config(ip, gateway, subnet, dns)) {
-        //    Serial.println("Static IP Failed to configure");
-        //}
+        if (!WiFi.config(ip, gateway, subnet, dns)) {
+           Serial.println("Static IP Failed to configure");
+        }
       }
   }
   
@@ -354,33 +354,35 @@ if (longPressDetected) {
 // #region Networking and webserver setup
   Serial.println("Nework setup start");
   // if ethernet capable device start ethernet
+  bool bEth = false;
   #ifdef ETH_CAP
     Serial.println("Ethernet capable.. checking connection");
     if(ETH.linkUp()) {
       Serial.println("Ethernet connected");
       Serial.println(ETH.localIP());
+      bEth = true;
     }
   #endif
-    else {
-    Serial.println("Ethernet not connected starting wifi");
-    // Start Access Point if no stored WiFi credentials
-    if (storedSSID.isEmpty() || storedPassword.isEmpty()) {
-      startAccessPoint(true);
-    } else {
-      startAccessPoint(false);
-      // Connect to WiFi
-      WiFi.begin(storedSSID.c_str(), storedPassword.c_str());
-      // Attempt to connect with a timeout
-      int attempts = 0;
-      while (WiFi.status() != WL_CONNECTED && attempts < wifi_attempts) {
-        if (!b_silent > 0)
-        {
-          led.blink(1,1000);
-        }
-        delay(1000);
-        Serial.println("Connecting to WiFi...");
-        attempts++;
-        if (led.ethCap){
+    if (!bEth) {
+      Serial.println("Ethernet not connected starting wifi");
+      // Start Access Point if no stored WiFi credentials
+      if (storedSSID.isEmpty() || storedPassword.isEmpty()) {
+        startAccessPoint(true);
+      } else {
+        startAccessPoint(false);
+        // Connect to WiFi
+        WiFi.begin(storedSSID.c_str(), storedPassword.c_str());
+        // Attempt to connect with a timeout
+        int attempts = 0;
+        while (WiFi.status() != WL_CONNECTED && attempts < wifi_attempts) {
+          if (!b_silent > 0)
+          {
+            led.blink(1,1000);
+          }
+          delay(1000);
+          Serial.println("Connecting to WiFi...");
+          attempts++;
+          if (led.ethCap){
   #ifdef ETH_CAP
           if(ETH.linkUp()){
             Serial.println("ETH connected, rebooting...");
