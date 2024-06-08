@@ -97,13 +97,42 @@ void applyLEDEffectFromFileTask(void *parameter) {
 }
 
 void setupWebServer() {
-  //  if (SPIFFS.begin(true)) {
-  //   Serial.println("mounted SPIFFS");
-    
-  // }
-  // else{
-  //      Serial.println("ERROR:mounting SPIFFS");
-  // }
+  if (!SPIFFS.exists("/style.css")) {
+    Serial.println("Style not found, will create new file");
+    File style_css = SPIFFS.open("/style.css", FILE_WRITE, true);
+
+     String css_Style = 
+      "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; font-size: 18px; }"
+      "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 2em; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 46px; }"
+      "h3 { text-align: left; margin-bottom: 1em; font-size: 2.5rem; }"
+      "form { max-width: 90%; margin: 0 auto; text-align: left; }"
+      "label { display: block; margin-bottom: 1.5em; font-size: 24px; }"
+      "input[type='text'], input[type='password'], input[type='file'], select { width: 100%; padding: 1.5em; margin-bottom: 1.5em; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; border-radius: 1em; font-size: 2rem; }"
+      "input[type='submit'], input[type='button'] { width: 100%; padding: 2em; margin-top: 2em; background-color: #4CAF50; color: white; border: none; border-radius: 1em; cursor: pointer; font-size: 1.5rem; }"
+      "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }"
+      "select { width: 100%; padding: 0.8em; margin-bottom: 1em; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; font-size: 1.5rem; }"
+      "p { text-align: center; font-size: 1.5rem; margin-top: 0.5em; }"
+      "#signalStrength { margin-bottom: 1em; }"
+      ".switch { position: relative; display: inline-block; width: 4em; height: 2.25em; }"
+      ".switch input { display: none; }"
+      ".slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }"
+      ".slider:before { position: absolute; content: ''; height: 1.625em; width: 1.625em; left: 0.25em; bottom: 0.25em; background-color: white; transition: .4s; }"
+      "input:checked + .slider { background-color: #2196F3; }"
+      "input:focus + .slider { box-shadow: 0 0 1px #2196F3; }"
+      "input:checked + .slider:before { transform: translateX(1.625em); }"
+      ".slider.round { border-radius: 2.125em; }"
+      ".slider.round:before { border-radius: 50%; }"
+      "input[type='checkbox'] { width: 2.5em; height: 2.5em; }";
+
+    if (style_css.print(css_Style)) {
+      Serial.println("Successfully wrote style to style.css");
+    } else {
+      Serial.println("ERROR: Writing to style.css failed");
+    }
+  }
+  else {
+       Serial.println("ERROR:mounting SPIFFS");
+  }
     // Set up endpoints for web server
   server.on("/diagnostic", HTTP_GET, handleDiagnostic);
   server.on("/8bitTest", HTTP_POST, handle8BitTest);
@@ -566,160 +595,94 @@ void handleLedControl(AsyncWebServerRequest* request) {
   }
 }
 
-void handleRoot(AsyncWebServerRequest* request) 
-{
+void handleRoot(AsyncWebServerRequest* request) {
   loginUser(request);
-  
-String html = "<html><head><style>";
-html += "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; font-size: 18px; }"; // Increased font size for all text elements
-html += "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 2em; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 46px; }"; // Changed font size to relative unit
-html += "h3 { text-align: left; margin-bottom: 1em; font-size: 2.5rem; }"; // Changed font size to relative unit
-html += "form { max-width: 90%; margin: 0 auto; text-align: left; }"; // Align buttons to center
-html += "label { display: block; margin-bottom: 1.5em; font-size: 24px; }"; // Changed font size to relative unit
-html += "input[type='text'], input[type='password'], input[type='file'], select { width: 100%; padding: 1.5em; margin-bottom: 1.5em; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; border-radius: 1em;font-size: 2rem;}"; // Background color: #222, Border color: #fff
-html += "input[type='submit'], input[type='button'] { width: 100%; padding: 2em; margin-top: 2em; background-color: #4CAF50; color: white; border: none; border-radius: 1em; cursor: pointer; font-size: 1.5rem; }"; // Modified width to 600px, Changed font size to relative unit
-html += "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }";
-html += "select { width: 100%; padding: 0.8em; margin-bottom: 1em; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; font-size: 1.5rem; }"; // Background color: #222, Border color: #fff, Changed font size to relative unit
-html += "p { text-align: center; font-size: 1.5rem; margin-top: 0.5em; }"; // Updated style for the paragraph, Changed font size to relative unit
-html += "#signalStrength { margin-bottom: 1em; }";
-html += ".switch { position: relative; display: inline-block; width: 4em; height: 2.25em; }"; // Slider switch styles, Changed width and height to relative units
-html += ".switch input { display: none; }";
-html += ".slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }";
-html += ".slider:before { position: absolute; content: ''; height: 1.625em; width: 1.625em; left: 0.25em; bottom: 0.25em; background-color: white; transition: .4s; }"; // Changed height and width to relative units
-html += "input:checked + .slider { background-color: #2196F3; }";
-html += "input:focus + .slider { box-shadow: 0 0 1px #2196F3; }";
-html += "input:checked + .slider:before { transform: translateX(1.625em); }"; // Changed width to relative unit
-html += ".slider.round { border-radius: 2.125em; }"; // Changed border radius to relative unit
-html += ".slider.round:before { border-radius: 50%; }";
-html += "input[type='checkbox'] { width: 2.5em; height: 2.5em; }"; // Adjusted width and height of checkboxes
-html += "</style></head><body>";
 
+  String html = "<!DOCTYPE html><html><head>";
+  html += "<link rel='stylesheet' type='text/css' href='/style.css'>";
+  html += "<script>";
+  html += "function toggleSwitch(element) {";
+  html += "  element.checked = !element.checked;";
+  html += "}";
+  html += "</script>";
+  html += "</head><body>";
 
+  // Title header 1
+  html += "<h1>" + String(H_PRFX) + " Config</h1>";
 
+  // Main form for wifi config input
+  html += "<form action='/save' method='post'>";
+  html += "<h3> Device/Network Settings </h3>";
+  html += "Device Name    : <input type='text' name='devicename' value='" + DEV_NAME + "'><br>";
+  html += "WiFi SSID    : <input type='text' name='ssid' value='" + String(getStoredString(SSID_EEPROM_ADDR)) + "'><br>";
+  html += "WiFi Password: <input type='password' name='password' value='" + String(getStoredString(PASS_EEPROM_ADDR)) + "'><br>";
 
-
-// JavaScript code for slider switches
-html += "<script>";
-html += "function toggleSwitch(element) {";
-html += "  element.checked = !element.checked;";
-html += "}";
-html += "</script>";
-
-// Title header 1
-html += "<h1>" + String(H_PRFX) + " Config</h1>";
-// Main form for wifi config input
-html += "<form action='/save' method='post'>";
-html += "<h3> Device/Network Settings </h3>";
-html += "Device Name    : <input type='text' name='devicename' value='" + DEV_NAME + "'><br>";
-html += "WiFi SSID    : <input type='text' name='ssid' value='" + String(getStoredString(SSID_EEPROM_ADDR)) + "'><br>";
-html += "WiFi Password: <input type='password' name='password' value='" + String(getStoredString(PASS_EEPROM_ADDR)) + "'><br>";
-if (led.ethCap){
-    //html += "Ethernet to Wifi Failover   : <input type='hidden' name='b_failover' value='0'>";
+  if (led.ethCap) {
     html += "Ethernet to Wifi Failover  : <input type='checkbox' name='b_failover' " + String(b_failover ? "checked" : "") + " value='" + String(b_failover) +"'><br>";
-     //html += "<input type='checkbox' id='failoverSwitch' name='b_failover' value='1' " + String(b_failover ? "checked" : "") + " onclick='toggleSwitch(this)'/><label for='failoverSwitch'></label><br>";
-    html += "<p>Failover mode will fallback to wifi when Ethernet is disconnected</p>";
-    
-
-
-}
-
-// IP configuration section
-html += "<h3>IP Configuration</h3>";
-html += "<form action='/saveConfig' method='post'>";
-
-html += "Use DHCP: <input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + " onclick='toggleDHCP(this)'><br>";
-html += "<div id='manualConfig' style='display: " +  String(b_dhcp ? "none" : "block") + ";'>";
-
-
-html += "IP Address: <input type='text' name='ipAddress' value='" +String(getStoredString(IP_ADDR_EEPROM_ADDR)) + "'><br>";
-html += "Subnet Mask: <input type='text' name='subnetMask' value='" + String(getStoredString(IP_SUBNET_EEPROM_ADDR)) + "'><br>";
-html += "Gateway: <input type='text' name='gateway' value='" + String(getStoredString(IP_GATEWAY_EEPROM_ADDR)) + "'><br>";
-html += "DNS Server: <input type='text' name='dnsServer' value='" + String(getStoredString(IP_DNS_EEPROM_ADDR)) + "'><br>";
-html += "</div>";
-html += "<script>";
-html += "document.getElementById('dhcpCheckbox').addEventListener('change', function() {";
-html += "if (this.checked) {";
-html += "document.getElementById('manualConfig').style.display = 'none';";
-html += "} else {";
-html += "document.getElementById('manualConfig').style.display = 'block';";
-html += "}";
-html += "});";
-html += "</script>";
-
-html += "</select><br>";
-html += "<div id='signalStrength'></div>";
-html += "<div id='signalMeter' style='max-width: 400px; border: 1px solid black;'></div>";  // Set max width to 400 pixels with a black border
-// Main form for DMX/Artnet config input
-html += "<h3> ArtNet/DMX Settings </h3>";
-//html += "Art-Net Universe Start: <input type='text' name='universe_start' value='" + String(getStoredString(UNIVERSE_START_EEPROM_ADDR)) + "'><br>";
-html += "Art-Net Universe Start: <select name='universe_start'>";
-for (int i = 0; i <= 15; ++i) {
-  html += "<option value='" + String(i) + "' " + (getStoredString(UNIVERSE_START_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
-}
-html += "</select>";
-//html += "Art-Net Universe End: <input type='text' name='universe_end' value='" + String(getStoredString(UNIVERSE_END_EEPROM_ADDR)) + "'><br>";
-html += "Art-Net Universe End: <select name='universe_end'>";
-for (int i = 0; i <= 15; ++i) {
-  html += "<option value='" + String(i) + "' " + (getStoredString(UNIVERSE_END_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
-}
-html += "</select>";
-//html += "Art-Net Universe: <select name='universe'>";
-//for (int i = 0; i <= 15; ++i) {
-//  html += "<option value='" + String(i) + "' " + (getStoredString(UNIVERSE_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
-//}
-html += "</select><br>";
-html += "DMX Start Addr  : <select name='DmxAddr'>";
-for (int i = 0; i <= 512; ++i) {
-  html += "<option value='" + String(i) + "' " + (getStoredString(DMX_ADDR_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
-}
-
-html += "</select>";
-
-// Calculate DMX address range
-int startAddr = getStoredString(DMX_ADDR_EEPROM_ADDR).toInt();
-int endAddr;
-
-if (b_16Bit) {
-    // 16-bit mode: DMX address range is startAddr to (startAddr + (nrOfLeds * 6))
-    endAddr = startAddr + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() * 6 );
-} else {
-    // 8-bit mode: DMX address range is startAddr to (startAddr + (nrOfLeds * 3))
-    endAddr = startAddr + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() * 3 );
-}
-
-html += "<br>";
-html += "Current Address Range: " + String(startAddr+1) + " - " + String(endAddr) + "<br>";
-
-
-html += "</select><br>";
-// Main form for LED config input
-html += "<h3> Pixel Settings </h3>";
-//html += "Nr of LEDS      : <input type='text' name='NrofLEDS' value='" + String(getStoredString(NRLEDS_EEPROM_ADDR)) + "'><br>";
-html += "Number of Pixels per universe : <select name='NrofLEDS'>";
-for (int i = 1; i <= 170; ++i) {
-    if (b_16Bit && i > 85) {
-    break;
+    html += "<p>Failover mode will fallback to wifi when Ethernet is disconnected</p>";    
   }
-  html += "<option value='" + String(i) + "' " + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
-}
-html += "<select><br>";
-// Add your select options here
-html += "</select><br>";
-/*
-html += "16-bit Mode: <input type='hidden' name='b_16Bit' value='0'>";
-html += "<input type='checkbox' id='16BitCheckbox' name='b_16Bit' value='1' " + String(b_16Bit ? "checked" : "") + " onclick='toggleCheckbox(this)'><br>";
-html += "<p>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</p>";
 
-html += "Silent mode: <input type='hidden' name='b_silent' value='0'>";
-html += "<input type='checkbox' id='b_silentCheckbox' name='b_silent' value='1' " + String(b_silent ? "checked" : "") + " onclick='toggleCheckbox(this)'><br>";
-html += "<p>In silent mode no connection status is given on the LED outputs</p>";
+  // IP configuration section
+  html += "<h3>IP Configuration</h3>";
+  html += "Use DHCP: <input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + " onclick='toggleDHCP(this)'><br>";
+  html += "<div id='manualConfig' style='display: " +  String(b_dhcp ? "none" : "block") + ";'>";
+  html += "IP Address: <input type='text' name='ipAddress' value='" +String(getStoredString(IP_ADDR_EEPROM_ADDR)) + "'><br>";
+  html += "Subnet Mask: <input type='text' name='subnetMask' value='" + String(getStoredString(IP_SUBNET_EEPROM_ADDR)) + "'><br>";
+  html += "Gateway: <input type='text' name='gateway' value='" + String(getStoredString(IP_GATEWAY_EEPROM_ADDR)) + "'><br>";
+  html += "DNS Server: <input type='text' name='dnsServer' value='" + String(getStoredString(IP_DNS_EEPROM_ADDR)) + "'><br>";
+  html += "</div>";
 
-html += "Reverse DMX addresses: <input type='hidden' name='b_reverseArray' value='0'>";
-html += "<input type='checkbox' id='b_reverseArrayCheckbox' name='b_reverseArray' value='1' " + String(b_reverseArray ? "checked" : "") + " onclick='toggleCheckbox(this)'><br>";
-html += "<p>Reverse DMX addresses will address the pixels in reverse order</p>";
-*/
-  
+  html += "<script>";
+  html += "document.getElementById('dhcpCheckbox').addEventListener('change', function() {";
+  html += "if (this.checked) {";
+  html += "document.getElementById('manualConfig').style.display = 'none';";
+  html += "} else {";
+  html += "document.getElementById('manualConfig').style.display = 'block';";
+  html += "}";
+  html += "});";
+  html += "</script>";
 
+  // Main form for DMX/Artnet config input
+  html += "<h3> ArtNet/DMX Settings </h3>";
+  html += "Art-Net Universe Start: <select name='universe_start'>";
+  for (int i = 0; i <= 15; ++i) {
+    html += "<option value='" + String(i) + "' " + (getStoredString(UNIVERSE_START_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
+  }
+  html += "</select>";
+  html += "Art-Net Universe End: <select name='universe_end'>";
+  for (int i = 0; i <= 15; ++i) {
+    html += "<option value='" + String(i) + "' " + (getStoredString(UNIVERSE_END_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
+  }
+  html += "</select><br>";
+
+  html += "DMX Start Addr  : <select name='DmxAddr'>";
+  for (int i = 0; i <= 512; ++i) {
+    html += "<option value='" + String(i) + "' " + (getStoredString(DMX_ADDR_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
+  }
+  html += "</select>";
+
+  // Calculate DMX address range
+  int startAddr = getStoredString(DMX_ADDR_EEPROM_ADDR).toInt();
+  int endAddr;
+  if (b_16Bit) {
+    endAddr = startAddr + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() * 6 );
+  } else {
+    endAddr = startAddr + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() * 3 );
+  }
+
+  html += "<br>";
+  html += "Current Address Range: " + String(startAddr+1) + " - " + String(endAddr) + "<br>";
+
+  // Main form for LED config input
+  html += "<h3> Pixel Settings </h3>";
+  html += "Number of Pixels per universe : <select name='NrofLEDS'>";
+  for (int i = 1; i <= 170; ++i) {
+    if (b_16Bit && i > 85) {
+      break;
+    }
+    html += "<option value='" + String(i) + "' " + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
+  }
+  html += "<select><br>";
 
   html += "16-bit Mode   : <input type='checkbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + " value='" + String(b_16Bit) +"'><br>";
   html += "<p>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</p>";
@@ -732,108 +695,55 @@ html += "<p>Reverse DMX addresses will address the pixels in reverse order</p>";
   html += "<p>Reverse mode: Highest address = first LED outwards from the controller</p>";
   html += "<p>NOTE: Default color space is BGR in reverse order this will be RGB</p>";
 
+  // Add the Identify button with spacing
+  html += "<form id='saveForm' action='/save' method='post'>";
+  html += "<input type='submit' value='Save' onclick='saveClicked()' style='margin-bottom: 10px; margin-top: 10px;'>";
+  html += "</form>";
+  html += "<form id='identifyForm' method='post'>";
+  html += "<input type='button' value='Identify' onclick='identifyClicked()' style='margin-top: 10px;'>";
+  html += "</form>";
 
-// Add the Identify button with spacing
-html += "<form id='saveForm' action='/save' method='post'>";
-html += "<input type='submit' value='Save' onclick='saveClicked()' style='margin-bottom: 10px; margin-top: 10px;'>";
-html += "</form>";
-html += "<form id='identifyForm' method='post'>";
-html += "<input type='button' value='Identify' onclick='identifyClicked()' style='margin-top: 10px;'>";
-html += "</form>";
-// add led control button
-html += "<form id='ledControl' method='post'>";
-html += "<input type='button' value='LEDControl' onclick='window.location.href=\"/ledcontrol\"' style='margin-top: 10px;'>";
-html += "</form>";
-// add reboot button
-html += "<form id='rebootForm' method='post'>";
-html += "<input type='button' value='Reboot' onclick='rebootClicked()' style='margin-top: 10px;'>";
-html += "</form>";
-// Updated firmware version display
-html += "<form method='POST' action='/update' enctype='multipart/form-data' style='margin-top: 20px;'>";
-html += "Firmware Update: <input type='file' name='update'><br><br>";
-html += "<input type='submit' value='Update'>";
-html += "</form>";
-html += "<p>Firmware Version: " + String(FIRMWARE_VERSION) + "</p>";
-html += "<p>HW Version: " + String(ledDriverInstance.hwVersion) + "</p>";
-html += "<p>Daniel Guurink-Hoogerwerf</p>";
-html += "<a href='/diagnostic'>Diagnostics</a><br>";
-// script for identify button
-html += "<script>";
-html += "function identifyClicked() {";
-html += "var xhttp = new XMLHttpRequest();";
-html += "xhttp.open('POST', '/identify', true);";
-html += "xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');";
-html += "xhttp.send();";
-html += "}";
-html += "function rebootClicked() {";
-html += "var xhttp = new XMLHttpRequest();";
-html += "xhttp.open('POST', '/reboot', true);";
-html += "xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');";
-html += "xhttp.send();";
-html += "}";
-html += "</script>";
-// Include the JavaScript code for fetching signal strength
-html += "<script>";
-html += "function toggleSwitch(element) {";
-html +=  "element.previousSibling.value = element.checked ? '1' : '0';";
-html += "}";
-html += "function updateSignalStrength() {";
-html += "var xhttp = new XMLHttpRequest();";
-html += "xhttp.onreadystatechange = function() {";
-html += "if (this.readyState == 4 && this.status == 200) {";
-html += "var signalStrength = parseInt(this.responseText);";
-html += "document.getElementById('signalStrength').innerHTML = 'WiFi Signal Strength: ' + signalStrength + ' dBm';";
-html += "updateSignalStrengthMeter(signalStrength);";
-html += "}";
-html += "};";
-html += "xhttp.open('GET', '/getSignalStrength', true);";
-html += "xhttp.send();";
-html += "}";
-html += "function updateSignalStrengthMeter(signalStrength) {";
-html += "var signalMeter = document.getElementById('signalMeter');";
-html += "var maxSignal = -30;";
-html += "var minSignal = -90;";
-html += "var bars;";
-html += "bars = Math.min(6, Math.max(1, Math.ceil((signalStrength - minSignal) / ((maxSignal - minSignal) / 6))));";
-html += "var color;";
-html += "if (bars == 1) {";
-html += "color = 'red';";
-html += "} else if (bars <= 3) {";
-html += "color = 'orange';";
-html += "} else if (bars <= 4) {";
-html += "color = 'yellow';";
-html += "} else {";
-html += "color = 'green';";
-html += "}";
-html += "signalMeter.innerHTML = '';";
-html += "for (var i = 0; i < bars; i++) {";
-html += "var bar = document.createElement('div');";
-html += "bar.style.border = '1px solid black';";
-html += "bar.style.backgroundColor = color;";
-html += "bar.style.width = 'calc(100% / 6 - 2px)';";
-html += "bar.style.height = '30px';"; // Adjusted height to be twice as high
-html += "bar.style.display = 'inline-block';";
-html += "signalMeter.appendChild(bar);";
-html += "}";
-html += "var labels = ['Weak', 'Good', 'Best'];";
-html += "var labelContainer = document.getElementById('signalLabels');";
-html += "labelContainer.innerHTML = '';";
-html += "for (var i = 0; i < 3; i++) {";
-html += "var label = document.createElement('div');";
-html += "label.innerHTML = labels[i];";
-html += "label.style.width = 'calc(100% / 6 - 4px)';";
-html += "label.style.textAlign = 'center';";
-html += "label.style.display = 'inline-block';";
-html += "labelContainer.appendChild(label);";
-html += "}";
-html += "}";
-html += "setInterval(updateSignalStrength, 5000);";
-html += "updateSignalStrength();";
-html += "</script>";
-html += "</body></html>";
+  // Add led control button
+  html += "<form id='ledControl' method='post'>";
+  html += "<input type='button' value='LEDControl' onclick='window.location.href=\"/ledcontrol\"' style='margin-top: 10px;'>";
+  html += "</form>";
+
+  // Add reboot button
+  html += "<form id='rebootForm' method='post'>";
+  html += "<input type='button' value='Reboot' onclick='rebootClicked()' style='margin-top: 10px;'>";
+  html += "</form>";
+
+  // Updated firmware version display
+  html += "<form method='POST' action='/update' enctype='multipart/form-data' style='margin-top: 20px;'>";
+  html += "Firmware Update: <input type='file' name='update'><br><br>";
+  html += "<input type='submit' value='Update'>";
+  html += "</form>";
+  html += "<p>Firmware Version: " + String(FIRMWARE_VERSION) + "</p>";
+  html += "<p>HW Version: " + String(ledDriverInstance.hwVersion) + "</p>";
+  html += "<p>Daniel Guurink-Hoogerwerf</p>";
+  html += "<a href='/diagnostic'>Diagnostics</a><br>";
+
+  // Script for identify button
+  html += "<script>";
+  html += "function identifyClicked() {";
+  html += "var xhttp = new XMLHttpRequest();";
+  html += "xhttp.open('POST', '/identify', true);";
+  html += "xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');";
+  html += "xhttp.send();";
+  html += "}";
+  html += "function rebootClicked() {";
+  html += "var xhttp = new XMLHttpRequest();";
+  html += "xhttp.open('POST', '/reboot', true);";
+  html += "xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');";
+  html += "xhttp.send();";
+  html += "}";
+  html += "</script>";
+
+  html += "</body></html>";
 
   request->send(200, "text/html", html);
 }
+
 
 void handleReboot(AsyncWebServerRequest* request) {
   loginUser(request);
@@ -862,13 +772,9 @@ void handleDiagnostic(AsyncWebServerRequest* request) {
   diagnosticInfo += "<p>Free Heap: " + String(ESP.getFreeHeap()) + " bytes</p>";
   diagnosticInfo += "<p>Received universe: " + String(recvUniverse) + "</p>";
 
-  // Add upload field
-  diagnosticInfo += "<form action='/upload' method='post' enctype='multipart/form-data'>";
-  diagnosticInfo += "<label for='file'>Upload File:</label>";
-  diagnosticInfo += "<input type='file' id='file' name='file'>";
-  diagnosticInfo += "<input type='submit' value='Upload'>";
-  diagnosticInfo += "</form>";
-
+  diagnosticInfo += "</select><br>";
+  diagnosticInfo += "<div id='signalStrength'></div>";
+  diagnosticInfo += "<div id='signalMeter' style='max-width: 400px; border: 1px solid black;'></div>";  // Set max width to 400 pixels with a black border
   // Add checkbox for diagnostic flag
   diagnosticInfo += "<form id='diagForm' method='post'>";
   diagnosticInfo += "<label><input type='checkbox' id='diagCheckbox' name='diag' onchange='updateDiagFlag()'> Disable ArtNet</label>";
@@ -908,7 +814,64 @@ void handleDiagnostic(AsyncWebServerRequest* request) {
   diagnosticInfo += "xhttp.send('diag=' + (diagValue ? '1' : '0'));";
   diagnosticInfo += "}";
   diagnosticInfo += "</script>";
-
+  // Include the JavaScript code for fetching signal strength
+  diagnosticInfo += "<script>";
+  diagnosticInfo += "function toggleSwitch(element) {";
+  diagnosticInfo +=  "element.previousSibling.value = element.checked ? '1' : '0';";
+  diagnosticInfo += "}";
+  diagnosticInfo += "function updateSignalStrength() {";
+  diagnosticInfo += "var xhttp = new XMLHttpRequest();";
+  diagnosticInfo += "xhttp.onreadystatechange = function() {";
+  diagnosticInfo += "if (this.readyState == 4 && this.status == 200) {";
+  diagnosticInfo += "var signalStrength = parseInt(this.responseText);";
+  diagnosticInfo += "document.getElementById('signalStrength').innerHTML = 'WiFi Signal Strength: ' + signalStrength + ' dBm';";
+  diagnosticInfo += "updateSignalStrengthMeter(signalStrength);";
+  diagnosticInfo += "}";
+  diagnosticInfo += "};";
+  diagnosticInfo += "xhttp.open('GET', '/getSignalStrength', true);";
+  diagnosticInfo += "xhttp.send();";
+  diagnosticInfo += "}";
+  diagnosticInfo += "function updateSignalStrengthMeter(signalStrength) {";
+  diagnosticInfo += "var signalMeter = document.getElementById('signalMeter');";
+  diagnosticInfo += "var maxSignal = -30;";
+  diagnosticInfo += "var minSignal = -90;";
+  diagnosticInfo += "var bars;";
+  diagnosticInfo += "bars = Math.min(6, Math.max(1, Math.ceil((signalStrength - minSignal) / ((maxSignal - minSignal) / 6))));";
+  diagnosticInfo += "var color;";
+  diagnosticInfo += "if (bars == 1) {";
+  diagnosticInfo += "color = 'red';";
+  diagnosticInfo += "} else if (bars <= 3) {";
+  diagnosticInfo += "color = 'orange';";
+  diagnosticInfo += "} else if (bars <= 4) {";
+  diagnosticInfo += "color = 'yellow';";
+  diagnosticInfo += "} else {";
+  diagnosticInfo += "color = 'green';";
+  diagnosticInfo += "}";
+  diagnosticInfo += "signalMeter.innerHTML = '';";
+  diagnosticInfo += "for (var i = 0; i < bars; i++) {";
+  diagnosticInfo += "var bar = document.createElement('div');";
+  diagnosticInfo += "bar.style.border = '1px solid black';";
+  diagnosticInfo += "bar.style.backgroundColor = color;";
+  diagnosticInfo += "bar.style.width = 'calc(100% / 6 - 2px)';";
+  diagnosticInfo += "bar.style.height = '30px';"; // Adjusted height to be twice as high
+  diagnosticInfo += "bar.style.display = 'inline-block';";
+  diagnosticInfo += "signalMeter.appendChild(bar);";
+  diagnosticInfo += "}";
+  diagnosticInfo += "var labels = ['Weak', 'Good', 'Best'];";
+  diagnosticInfo += "var labelContainer = document.getElementById('signalLabels');";
+  diagnosticInfo += "labelContainer.innerHTML = '';";
+  diagnosticInfo += "for (var i = 0; i < 3; i++) {";
+  diagnosticInfo += "var label = document.createElement('div');";
+  diagnosticInfo += "label.innerHTML = labels[i];";
+  diagnosticInfo += "label.style.width = 'calc(100% / 6 - 4px)';";
+  diagnosticInfo += "label.style.textAlign = 'center';";
+  diagnosticInfo += "label.style.display = 'inline-block';";
+  diagnosticInfo += "labelContainer.appendChild(label);";
+  diagnosticInfo += "}";
+  diagnosticInfo += "}";
+  diagnosticInfo += "setInterval(updateSignalStrength, 5000);";
+  diagnosticInfo += "updateSignalStrength();";
+  diagnosticInfo += "</script>";
   // Send the diagnostic information as HTML
   request->send(200, "text/html", diagnosticInfo);
 }
