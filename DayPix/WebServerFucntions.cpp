@@ -105,6 +105,7 @@ void setupWebServer() {
       "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; font-size: 18px; }"
       "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 2em; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 46px; }"
       "h3 { text-align: left; margin-bottom: 1em; font-size: 2.5rem; }"
+      "h4 {text-align: left; font-size: 1.1rem; color: #EFEFE0; padding: 0px; border-radius: 5px; margin-top: 3px; margin-bottom: 10px; font-style: italic; }"
       "form { max-width: 90%; margin: 0 auto; text-align: left; }"
       "label { display: block; margin-bottom: 1.5em; font-size: 24px; }"
       "input[type='text'], input[type='password'], input[type='file'], select { width: 100%; padding: 1.5em; margin-bottom: 1.5em; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; border-radius: 1em; font-size: 2rem; }"
@@ -618,8 +619,8 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "WiFi Password: <input type='password' name='password' value='" + String(getStoredString(PASS_EEPROM_ADDR)) + "'><br>";
 
   if (led.ethCap) {
-    html += "Ethernet to Wifi Failover  : <input type='checkbox' name='b_failover' " + String(b_failover ? "checked" : "") + " value='" + String(b_failover) +"'><br>";
-    html += "<p>Failover mode will fallback to wifi when Ethernet is disconnected</p>";    
+    html += "Ethernet to Wifi Failover  : <input type='checkbox' id='failoverCheckbox' name='b_failover' " + String(b_failover ? "checked" : "") + " onclick='toggleFailover(this)'><br>";
+    html += "<h4>Failover mode will fallback to wifi when Ethernet is disconnected</h4>";    
   }
 
   // IP configuration section
@@ -683,17 +684,16 @@ void handleRoot(AsyncWebServerRequest* request) {
     html += "<option value='" + String(i) + "' " + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
   }
   html += "<select><br>";
+  html += "16-bit Mode   : <input type='checkbox' id='16_bitCheckbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + + " onclick='toggle16bit(this)'><br>";
+  html += "<h4>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</h4>";
+  html += "Silent mode : <input type='checkbox' id='silentCheckbox' name='b_silent' " + String(b_silent ? "checked" : "") + " onclick='toggleSilent(this)'><br>";
+  html += "<h4>In silent mode no connection status is given on the LED outputs</h4>";
+  html += "Reverse DMX addresses : <input type='checkbox' id='reverseCheckbox' name='b_reverseArray' " + String(b_reverseArray ? "checked" : "") + " onclick='toggleReverse(this)'><br>";
+  html += "<h4>Reverse DMX addresses will address the pixels in reverse order</h4>";
 
-  html += "16-bit Mode   : <input type='checkbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + " value='" + String(b_16Bit) +"'><br>";
-  html += "<p>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</p>";
-  html += "Silent mode : <input type='checkbox' name='b_silent' " + String(b_silent ? "checked" : "") + " value='" + String(b_silent) + "'><br>";
-  html += "<p>In silent mode no connection status is given on the LED outputs</p>";
-  html += "Reverse DMX addresses : <input type='checkbox' name='b_reverseArray' " + String(b_reverseArray ? "checked" : "") + " value='" + String(b_reverseArray) + "'><br>";
-  html += "<p>Reverse DMX addresses will address the pixels in reverse order</p>";
-
-  html += "<p>Normal mode: Lowest address = first LED outwards from the controller</p>";
-  html += "<p>Reverse mode: Highest address = first LED outwards from the controller</p>";
-  html += "<p>NOTE: Default color space is BGR in reverse order this will be RGB</p>";
+  html += "<h4>Normal mode: Lowest address = first LED outwards from the controller</h4>";
+  html += "<h4>Reverse mode: Highest address = first LED outwards from the controller</h4>";
+  html += "<h4>NOTE: Default color space is BGR in reverse order this will be RGB</h4>";
 
   // Add the Identify button with spacing
   html += "<form id='saveForm' action='/save' method='post'>";
@@ -930,20 +930,20 @@ void handleSave(AsyncWebServerRequest* request) {
   String DmxAddr = request->arg("DmxAddr");
   String NrofLEDS = request->arg("NrofLEDS");
     
-    String s_16Bit = "0";
-    s_16Bit = request->arg("b_16Bit") == "0" ? "1" : "0";
+    String s_16Bit ;
+    s_16Bit = request->arg("b_16Bit") == "on" ? "1" : "0";
     int b_16Bit_int = s_16Bit.toInt();
     
-    String s_failover ="0";
-    s_failover = request->arg("b_failover") == "0" ? "1" : "0";
+    String s_failover ;
+    s_failover = request->arg("b_failover") == "on" ? "1" : "0";
     int b_failover_int = s_failover.toInt();
     
-    String s_silent = "0";
-    s_silent = request->arg("b_silent") == "0" ? "1" : "0";
+    String s_silent ;
+    s_silent = request->arg("b_silent") == "on" ? "1" : "0";
     int b_silent_int = s_silent.toInt();
     
-    String s_reverseArray = "0" ;
-    s_reverseArray = request->arg("b_reverseArray") == "1" ? "1" : "0";
+    String s_reverseArray ;
+    s_reverseArray = request->arg("b_reverseArray") == "on" ? "1" : "0";
     int b_reverseArray_int = s_reverseArray.toInt();
     
     String s_dhcp ;
