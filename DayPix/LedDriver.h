@@ -4,9 +4,9 @@
 
 #include <Arduino.h>
 // Define macros for different hardware platforms
-//#define XIAO_ESP32C3
+#define XIAO_ESP32C3
 //#define XIAO_ESP32S3
-#define ESP_ETH01
+//#define ESP_ETH01
 
 
 class ledDriver {
