@@ -350,6 +350,7 @@ if (longPressDetected) {
 // #endregion 
   // Initialize LED and effect
   effect.initialize();
+
   led.initialize(NrOfLeds, DmxAddr);
 // #region Networking and webserver setup
   Serial.println("Nework setup start");
@@ -485,7 +486,7 @@ void loop() {
 #ifdef RST_BTN
   digitalWrite(rLED, HIGH);
 #endif
-  delay(100);
+  delay(200);
 #ifdef RST_BTN
   digitalWrite(rLED, LOW);
 

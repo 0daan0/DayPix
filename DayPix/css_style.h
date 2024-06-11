@@ -1,0 +1,217 @@
+const char *css_retro = "\
+@font-face {\
+    font-family: 'Orbitron';\
+    src: url('font.ttf') format('truetype');\
+}\
+\
+@font-face {\
+    font-family: 'Orbitron';\
+    src: url('font.ttf') format('truetype');\
+    font-weight: 400;\
+}\
+\
+@font-face {\
+    font-family: 'Orbitron';\
+    src: url('font.ttf') format('truetype');\
+    font-weight: 700;\
+}\
+\
+body {\
+    font-family: 'Orbitron', Arial, sans-serif;\
+    background-color: #1a1a2e;\
+    color: #c4f0ff;\
+    font-size: 18px;\
+}\
+\
+h1 {\
+    text-align: center;\
+    border: 3px solid;\
+    max-width: 90%;\
+    margin: 0 auto;\
+    background-image: linear-gradient(to right, #ff00cc, #3333ff, #00ffff, #00ff99, #ffff00, #ff6600, #ff0033);\
+    padding: 2em;\
+    color: #fff;\
+    text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;\
+    font-size: 46px;\
+    font-family: 'Orbitron', cursive;\
+}\
+\
+h3 {\
+    text-align: left;\
+    margin-bottom: 1em;\
+    font-size: 2.5rem;\
+    color: #ff66cc;\
+}\
+\
+h4 {\
+    text-align: left;\
+    font-size: 1.1rem;\
+    color: #ffccff;\
+    padding: 0px;\
+    border-radius: 5px;\
+    margin-top: 3px;\
+    margin-bottom: 10px;\
+    font-style: italic;\
+}\
+\
+form {\
+    max-width: 90%;\
+    margin: 0 auto;\
+    text-align: left;\
+    background: rgba(26, 26, 46, 0.8);\
+    padding: 20px;\
+    border-radius: 10px;\
+}\
+\
+label {\
+    display: block;\
+    margin-bottom: 1.5em;\
+    font-size: 24px;\
+    color: #ff99ff;\
+}\
+\
+input[type='text'],\
+input[type='password'],\
+input[type='file'],\
+select {\
+    width: 100%;\
+    padding: 1.5em;\
+    margin-bottom: 1.5em;\
+    box-sizing: border-box;\
+    background-color: #222244;\
+    color: #c4f0ff;\
+    border: 2px solid #ff00ff;\
+    border-radius: 1em;\
+    font-size: 2rem;\
+}\
+\
+input[type='submit'],\
+input[type='button'] {\
+    width: 100%;\
+    padding: 2em;\
+    margin-top: 2em;\
+    background-color: #ff007f;\
+    color: white;\
+    border: none;\
+    border-radius: 1em;\
+    cursor: pointer;\
+    font-size: 1.5rem;\
+}\
+\
+input[type='submit']:hover,\
+input[type='button']:hover {\
+    background-color: #ff33a6;\
+}\
+\
+select {\
+    width: 100%;\
+    padding: 0.8em;\
+    margin-bottom: 1em;\
+    box-sizing: border-box;\
+    background-color: #222244;\
+    color: #c4f0ff;\
+    border: 2px solid #ff00ff;\
+    font-size: 1.5rem;\
+}\
+\
+p {\
+    text-align: center;\
+    font-size: 1.5rem;\
+    margin-top: 0.5em;\
+    color: #ff99ff;\
+}\
+\
+#signalStrength {\
+    margin-bottom: 1em;\
+}\
+\
+.switch {\
+    position: relative;\
+    display: inline-block;\
+    width: 4em;\
+    height: 2.25em;\
+}\
+\
+.switch input {\
+    display: none;\
+}\
+\
+.slider {\
+    position: absolute;\
+    cursor: pointer;\
+    top: 0;\
+    left: 0;\
+    right: 0;\
+    bottom: 0;\
+    background-color: #ccc;\
+    transition: .4s;\
+}\
+\
+.slider:before {\
+    position: absolute;\
+    content: '';\
+    height: 1.625em;\
+    width: 1.625em;\
+    left: 0.25em;\
+    bottom: 0.25em;\
+    background-color: white;\
+    transition: .4s;\
+}\
+\
+input[type='range'] {\
+    width: 100%;\
+    height: 80px;\
+    padding: 30px;\
+    margin-bottom: 30px;\
+    box-sizing: border-box;\
+    background-color: rgba(26, 26, 46, 0.7);\
+    color: #c4f0ff;\
+    border: 2px solid #ff00ff;\
+    border-radius: 20px;\
+    -webkit-appearance: none;\
+}\
+\
+input[type='range']::-webkit-slider-thumb {\
+    -webkit-appearance: none;\
+    appearance: none;\
+    width: 60px;\
+    height: 60px;\
+    background: #ff007f;\
+    border-radius: 50%;\
+    cursor: pointer;\
+}\
+\
+a {\
+    color: #ff99ff;\
+}\
+\
+a:hover {\
+    color: white;\
+}\
+\
+input:checked + .slider {\
+    background-color: #2196F3;\
+}\
+\
+input:focus + .slider {\
+    box-shadow: 0 0 1px #2196F3;\
+}\
+\
+input:checked + .slider:before {\
+    transform: translateX(1.625em);\
+}\
+\
+.slider.round {\
+    border-radius: 2.125em;\
+}\
+\
+.slider.round:before {\
+    border-radius: 50%;\
+}\
+\
+input[type='checkbox'] {\
+    width: 2.5em;\
+    height: 2.5em;\
+    accent-color: #ff007f;\
+}\
+";

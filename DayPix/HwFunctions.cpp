@@ -4,10 +4,16 @@
 #include <EEPROM.h>
 #include "config.h"
 #include "WebServerFunctions.h"
+//#include "Orbitron_font.h"
+
 
 // reset watchdog timer
 void rstWdt(){
    esp_task_wdt_reset();
+}
+
+void reset(){
+   ESP.restart();
 }
 
 void writeConfigFile() {
@@ -49,6 +55,17 @@ void resetToDefault(){
   storeString(IP_SUBNET_EEPROM_ADDR, "255.0.0.0");
   storeString(IP_GATEWAY_EEPROM_ADDR, "0.0.0.0");
   storeString(IP_DNS_EEPROM_ADDR, "0.0.0.0");
+
+
+  // if (!SPIFFS.exists("/font.ttf")) {
+  //   Serial.println("Font not found, will create new file");
+  //   File file = SPIFFS.open("/font.ttf", FILE_WRITE, true);
+  //   file.write(orbitron_variablefont_wght, orbitron_variablefont_wghtcnt);
+  //   file.close();
+
+  //   Serial.println("Font file written to filesystem");
+  // }
+  reset();
 }
 // Function to initialize EEPROM if not already initialized
 void initializeEEPROM() {
@@ -79,9 +96,7 @@ void setupHw(){
 }
 
 
-void reset(){
-   ESP.restart();
-}
+
 
 void listFiles(fs::FS &fs, const char *dirname) {
   Serial.printf("Listing directory: %s\n", dirname);

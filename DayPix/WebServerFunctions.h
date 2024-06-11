@@ -23,6 +23,7 @@ void handleBlankLEDSTest(AsyncWebServerRequest* request);
 void handleReboot(AsyncWebServerRequest* request);
 void handleSetDiag(AsyncWebServerRequest* request);
 void handleRainbow(AsyncWebServerRequest* request);
+void handleResetToDefault(AsyncWebServerRequest* request);
 void handleFileUpload(AsyncWebServerRequest* request);
 
 String getStoredString(int address);

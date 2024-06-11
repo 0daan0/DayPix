@@ -2,6 +2,7 @@
 
 #include "WebServerFunctions.h"
 #include "Config.h"
+#include "css_style.h"
 #include "LedDriver.h"  // Include this line
 #include <EEPROM.h>
 #include <ArduinoOTA.h>
@@ -17,6 +18,16 @@
 //ledDriver ledDriverInstance; 
 AsyncWebServer server(80);
 RGBEffects effects;
+
+
+  String html_header = "<!DOCTYPE html><html><head>"
+                      "<link rel='stylesheet' type='text/css' href='/style.css'>"
+                      "<script>"
+                      "function toggleSwitch(element) {"
+                      "  element.checked = !element.checked;"
+                      "}"
+                      "</script>"
+                      "</head><body>";
 
 // Function to determine the MIME type based on the file extension
 String getContentType(String filename) {
@@ -97,47 +108,25 @@ void applyLEDEffectFromFileTask(void *parameter) {
 }
 
 void setupWebServer() {
+  
   if (!SPIFFS.exists("/style.css")) {
     Serial.println("Style not found, will create new file");
     File style_css = SPIFFS.open("/style.css", FILE_WRITE, true);
 
-     String css_Style = 
-      "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; font-size: 18px; }"
-      "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 2em; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 46px; }"
-      "h3 { text-align: left; margin-bottom: 1em; font-size: 2.5rem; }"
-      "h4 {text-align: left; font-size: 1.1rem; color: #EFEFE0; padding: 0px; border-radius: 5px; margin-top: 3px; margin-bottom: 10px; font-style: italic; }"
-      "form { max-width: 90%; margin: 0 auto; text-align: left; }"
-      "label { display: block; margin-bottom: 1.5em; font-size: 24px; }"
-      "input[type='text'], input[type='password'], input[type='file'], select { width: 100%; padding: 1.5em; margin-bottom: 1.5em; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; border-radius: 1em; font-size: 2rem; }"
-      "input[type='submit'], input[type='button'] { width: 100%; padding: 2em; margin-top: 2em; background-color: #4CAF50; color: white; border: none; border-radius: 1em; cursor: pointer; font-size: 1.5rem; }"
-      "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }"
-      "select { width: 100%; padding: 0.8em; margin-bottom: 1em; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; font-size: 1.5rem; }"
-      "p { text-align: center; font-size: 1.5rem; margin-top: 0.5em; }"
-      "#signalStrength { margin-bottom: 1em; }"
-      ".switch { position: relative; display: inline-block; width: 4em; height: 2.25em; }"
-      ".switch input { display: none; }"
-      ".slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }"
-      ".slider:before { position: absolute; content: ''; height: 1.625em; width: 1.625em; left: 0.25em; bottom: 0.25em; background-color: white; transition: .4s; }"
-      "input:checked + .slider { background-color: #2196F3; }"
-      "input:focus + .slider { box-shadow: 0 0 1px #2196F3; }"
-      "input:checked + .slider:before { transform: translateX(1.625em); }"
-      ".slider.round { border-radius: 2.125em; }"
-      ".slider.round:before { border-radius: 50%; }"
-      "input[type='checkbox'] { width: 2.5em; height: 2.5em; }";
-
+     String css_Style = css_retro;
     if (style_css.print(css_Style)) {
       Serial.println("Successfully wrote style to style.css");
+      style_css.close();
     } else {
       Serial.println("ERROR: Writing to style.css failed");
     }
   }
-  else {
-       Serial.println("ERROR:mounting SPIFFS");
-  }
+  
     // Set up endpoints for web server
   server.on("/diagnostic", HTTP_GET, handleDiagnostic);
   server.on("/8bitTest", HTTP_POST, handle8BitTest);
   server.on("/rainbow", HTTP_POST, handleRainbow);
+  server.on("/ResetToDefault", HTTP_POST, handleResetToDefault);
   server.on("/16bitTest", HTTP_POST, handle16BitTest);
   server.on("/blankLEDSTest", HTTP_POST, handleBlankLEDSTest);
   server.on("/file", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -220,18 +209,18 @@ void setupWebServer() {
         file = root.openNextFile();
     }
     root.close();
-  String css = "<html><head><style>"
-                    "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; padding: 10px; }"
-                    "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 30px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 36px; }"
-                    "form { max-width: 90%; margin: 0 auto; }"
-                    "label { display: block; margin-bottom: 30px; font-size: 24px; }"
-                    "input[type='range'] { width: 100%; height: 80px; padding: 30px; margin-bottom: 30px; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 2px solid #EFEFE0; border-radius: 20px; -webkit-appearance: none; }"
-                    "input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 60px; height: 60px; background: #4CAF50; border-radius: 50%; cursor: pointer; }"
-                    "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: #4CAF50; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; }"
-                    "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }"
-                    "a {color: pink;}"
-                    "a:hover {color: white}"
-                    "</style></head><body>";
+  // String css = "<html><head><style>"
+  //                   "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; padding: 10px; }"
+  //                   "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 30px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 36px; }"
+  //                   "form { max-width: 90%; margin: 0 auto; }"
+  //                   "label { display: block; margin-bottom: 30px; font-size: 24px; }"
+  //                   "input[type='range'] { width: 100%; height: 80px; padding: 30px; margin-bottom: 30px; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 2px solid #EFEFE0; border-radius: 20px; -webkit-appearance: none; }"
+  //                   "input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 60px; height: 60px; background: #4CAF50; border-radius: 50%; cursor: pointer; }"
+  //                   "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: #4CAF50; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; }"
+  //                   "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }"
+  //                   "a {color: pink;}"
+  //                   "a:hover {color: white}"
+  //                   "</style></head><body>";
 
     // Generate response with file upload form, file listing, and space information in KB
     String response = "<h2>File Upload</h2>"
@@ -252,7 +241,7 @@ void setupWebServer() {
                       "</form>";
 
     // Send response to client
-    request->send(200, "text/html", css+response);
+    request->send(200, "text/html", html_header+response);
     });
 
  // Handle file upload
@@ -376,35 +365,43 @@ server.on("/applyEffect", HTTP_POST, [](AsyncWebServerRequest *request){
 server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
     // HTML for the LED control page
     String html = "<html><head><style>"
-                  "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; padding: 10px; background-image: url(/file?filename=bg.gif); background-size: cover; }" 
-                  "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 30px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 36px; }"
-                  "form { max-width: 90%; margin: 0 auto; }"
-                  "label { display: block; margin-bottom: 30px; font-size: 24px; }"
-                  "input[type='range'] { width: 100%; height: 80px; padding: 30px; margin-bottom: 30px; box-sizing: border-box; background-color: rgba(52, 53, 65, 0.7); color: #EFEFE0; border: 2px solid #EFEFE0; border-radius: 20px; -webkit-appearance: none; }"
-                  "input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 60px; height: 60px; background: #4CAF50; border-radius: 50%; cursor: pointer; }"
-                  "input[type='submit'], input[type='button'], select { width: 100%; padding: 40px; margin-top: 30px; background-color: rgba(76, 175, 80, 0.7); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; opacity: 0.7; }"
-                  "input[type='submit']:hover, input[type='button']:hover, select:hover { background-color: #45a049; opacity: 1; }"
-                   "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: rgba(76, 175, 80, 0.7); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; opacity: 0.7; }" // Added opacity to buttons
-                  "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; opacity: 1; }" // Adjusted opacity on hover
-                  "</style>"
-                  "<script>"
-                  "let bgToggle = false;"
-                  "document.addEventListener('click', function () {"
-                  "    bgToggle = !bgToggle;"
-                  "    if (bgToggle) {"
-                  "        document.body.style.backgroundImage = 'url(/file?filename=bg.gif)';"
-                  "    } else {"
-                  "        document.body.style.backgroundImage = 'url(/file?filename=bg2.gif)';"
-                  "    }"
-                  "});"
-                  "window.addEventListener('beforeunload', function (event) {"
-                  "    event.preventDefault();"
-                  "    event.returnValue = '';"
-                  "});"
-                  "</script>"
-                  "</head><body>";
-                  "</style></head><body>";
-    
+                   "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; padding: 10px; background-image: url(/file?filename=bg.gif); background-size: cover; }" 
+    //               "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 30px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 36px; }"
+    //               "form { max-width: 90%; margin: 0 auto; }"
+    //               "label { display: block; margin-bottom: 30px; font-size: 24px; }"
+    //               "input[type='range'] { width: 100%; height: 80px; padding: 30px; margin-bottom: 30px; box-sizing: border-box; background-color: rgba(52, 53, 65, 0.7); color: #EFEFE0; border: 2px solid #EFEFE0; border-radius: 20px; -webkit-appearance: none; }"
+    //               "input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 60px; height: 60px; background: #4CAF50; border-radius: 50%; cursor: pointer; }"
+    //               "input[type='submit'], input[type='button'], select { width: 100%; padding: 40px; margin-top: 30px; background-color: rgba(76, 175, 80, 0.7); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; opacity: 0.7; }"
+    //               "input[type='submit']:hover, input[type='button']:hover, select:hover { background-color: #45a049; opacity: 1; }"
+    //                "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: rgba(76, 175, 80, 0.7); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; opacity: 0.7; }" // Added opacity to buttons
+    //               "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; opacity: 1; }" // Adjusted opacity on hover
+                   "</style>";
+  // String html = "<!DOCTYPE html><html><head>";
+  // html += "<link rel='stylesheet' type='text/css' href='/style.css'>";
+  // html += "<script>";
+  // html += "function toggleSwitch(element) {";
+  // html += "  element.checked = !element.checked;";
+  // html += "}";
+  // html += "</script>";
+  // html += "</head><body>";
+  html += "<script>"
+          "let bgToggle = false;"
+          "document.addEventListener('click', function () {"
+          "    bgToggle = !bgToggle;"
+          "    if (bgToggle) {"
+          "        document.body.style.backgroundImage = 'url(/file?filename=bg.gif)';"
+          "    } else {"
+          "        document.body.style.backgroundImage = 'url(/file?filename=bg2.gif)';"
+          "    }"
+          "});"
+          "window.addEventListener('beforeunload', function (event) {"
+          "    event.preventDefault();"
+          "    event.returnValue = '';"
+          "});"
+          "</script>"
+          "</head><body>";
+          "</style></head><body>";
+
     html += "<h1>DayPix Control</h1>";
     html += "<form id='ledForm'>";
     html += "<label for='redSlider' style='font-size: 2.5rem;'>Red:</label><br>";
@@ -531,7 +528,7 @@ server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
     html += "</script>";
     
     html += "</body></html>";
-    request->send(200, "text/html", html);
+    request->send(200, "text/html", html_header + html);
 });
   server.begin();
 }
@@ -599,17 +596,17 @@ void handleLedControl(AsyncWebServerRequest* request) {
 void handleRoot(AsyncWebServerRequest* request) {
   loginUser(request);
 
-  String html = "<!DOCTYPE html><html><head>";
-  html += "<link rel='stylesheet' type='text/css' href='/style.css'>";
-  html += "<script>";
-  html += "function toggleSwitch(element) {";
-  html += "  element.checked = !element.checked;";
-  html += "}";
-  html += "</script>";
-  html += "</head><body>";
+  //  String html = "<!DOCTYPE html><html><head>";
+  //  html += "<link rel='stylesheet' type='text/css' href='/style.css'>";
+  //  html += "<script>";
+  //  html += "function toggleSwitch(element) {";
+  //  html += "  element.checked = !element.checked;";
+  //  html += "}";
+  //  html += "</script>";
+  //  html += "</head><body>";
 
   // Title header 1
-  html += "<h1>" + String(H_PRFX) + " Config</h1>";
+  String html = "<h1>" + String(H_PRFX) + " Config</h1>";
 
   // Main form for wifi config input
   html += "<form action='/save' method='post'>";
@@ -619,13 +616,13 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "WiFi Password: <input type='password' name='password' value='" + String(getStoredString(PASS_EEPROM_ADDR)) + "'><br>";
 
   if (led.ethCap) {
-    html += "Ethernet to Wifi Failover  : <input type='checkbox' id='failoverCheckbox' name='b_failover' " + String(b_failover ? "checked" : "") + " onclick='toggleFailover(this)'><br>";
-    html += "<h4>Failover mode will fallback to wifi when Ethernet is disconnected</h4>";    
+  html += "<input type='checkbox' id='failoverCheckbox' name='b_failover' " + String(b_failover ? "checked" : "") + " onclick='toggleFailover(this)'> <label for='failoverCheckbox'>Ethernet to Wifi Failover</label><br>";
+  html += "<h4>Failover mode will fallback to wifi when Ethernet is disconnected</h4>";
   }
 
   // IP configuration section
   html += "<h3>IP Configuration</h3>";
-  html += "Use DHCP: <input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + " onclick='toggleDHCP(this)'><br>";
+  html += "<input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + " onclick='toggleDHCP(this)'> Use DHCP<br>";
   html += "<div id='manualConfig' style='display: " +  String(b_dhcp ? "none" : "block") + ";'>";
   html += "IP Address: <input type='text' name='ipAddress' value='" +String(getStoredString(IP_ADDR_EEPROM_ADDR)) + "'><br>";
   html += "Subnet Mask: <input type='text' name='subnetMask' value='" + String(getStoredString(IP_SUBNET_EEPROM_ADDR)) + "'><br>";
@@ -684,12 +681,13 @@ void handleRoot(AsyncWebServerRequest* request) {
     html += "<option value='" + String(i) + "' " + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
   }
   html += "<select><br>";
-  html += "16-bit Mode   : <input type='checkbox' id='16_bitCheckbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + + " onclick='toggle16bit(this)'><br>";
+  html += "<input type='checkbox' id='16_bitCheckbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + " onclick='toggle16bit(this)'> 16-bit Mode<br>";
   html += "<h4>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</h4>";
-  html += "Silent mode : <input type='checkbox' id='silentCheckbox' name='b_silent' " + String(b_silent ? "checked" : "") + " onclick='toggleSilent(this)'><br>";
+  html += "<input type='checkbox' id='silentCheckbox' name='b_silent' " + String(b_silent ? "checked" : "") + " onclick='toggleSilent(this)'> Silent mode<br>";
   html += "<h4>In silent mode no connection status is given on the LED outputs</h4>";
-  html += "Reverse DMX addresses : <input type='checkbox' id='reverseCheckbox' name='b_reverseArray' " + String(b_reverseArray ? "checked" : "") + " onclick='toggleReverse(this)'><br>";
+  html += "<input type='checkbox' id='reverseCheckbox' name='b_reverseArray' " + String(b_reverseArray ? "checked" : "") + " onclick='toggleReverse(this)'> Reverse DMX addresses<br>";
   html += "<h4>Reverse DMX addresses will address the pixels in reverse order</h4>";
+
 
   html += "<h4>Normal mode: Lowest address = first LED outwards from the controller</h4>";
   html += "<h4>Reverse mode: Highest address = first LED outwards from the controller</h4>";
@@ -697,24 +695,24 @@ void handleRoot(AsyncWebServerRequest* request) {
 
   // Add the Identify button with spacing
   html += "<form id='saveForm' action='/save' method='post'>";
-  html += "<input type='submit' value='Save' onclick='saveClicked()' style='margin-bottom: 10px; margin-top: 10px;'>";
+  html += "<input type='submit' value='Save' onclick='saveClicked()'>";
   html += "</form>";
   html += "<form id='identifyForm' method='post'>";
-  html += "<input type='button' value='Identify' onclick='identifyClicked()' style='margin-top: 10px;'>";
+  html += "<input type='button' value='Identify' onclick='identifyClicked()'>";
   html += "</form>";
 
   // Add led control button
   html += "<form id='ledControl' method='post'>";
-  html += "<input type='button' value='LEDControl' onclick='window.location.href=\"/ledcontrol\"' style='margin-top: 10px;'>";
+  html += "<input type='button' value='LEDControl' onclick='window.location.href=\"/ledcontrol\"'>";
   html += "</form>";
 
   // Add reboot button
   html += "<form id='rebootForm' method='post'>";
-  html += "<input type='button' value='Reboot' onclick='rebootClicked()' style='margin-top: 10px;'>";
+  html += "<input type='button' value='Reboot' onclick='rebootClicked()'>";
   html += "</form>";
 
   // Updated firmware version display
-  html += "<form method='POST' action='/update' enctype='multipart/form-data' style='margin-top: 20px;'>";
+  html += "<form method='POST' action='/update' enctype='multipart/form-data'>";
   html += "Firmware Update: <input type='file' name='update'><br><br>";
   html += "<input type='submit' value='Update'>";
   html += "</form>";
@@ -741,7 +739,7 @@ void handleRoot(AsyncWebServerRequest* request) {
 
   html += "</body></html>";
 
-  request->send(200, "text/html", html);
+  request->send(200, "text/html",html_header + html);
 }
 
 
@@ -755,20 +753,28 @@ void handleDiagnostic(AsyncWebServerRequest* request) {
   loginUser(request);
 
   // Gather diagnostic information
-  String diagnosticInfo = "<html><head><style>";
-  diagnosticInfo += "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; }";
-  diagnosticInfo += "h1 { text-align: center; border: 3px solid; max-width: 400px; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 10px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }";
-  diagnosticInfo += "form { max-width: 400px; margin: 0 auto; }";
-  diagnosticInfo += "label { display: block; margin-bottom: 5px; }";
-  diagnosticInfo += "input[type='range'] { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; }";
-  diagnosticInfo += "input[type='submit'], input[type='button'] { width: 100%; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }";
-  diagnosticInfo += "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }";
-  diagnosticInfo += "p { text-align: center; font-size: 10px; margin-top: 20px; }"; // Updated style for the paragraph
-  diagnosticInfo += "#signalStrength { margin-bottom: 10px; }";
-  diagnosticInfo += "</style></head><body>";
+  // String diagnosticInfo = "<html><head><style>";
+  // diagnosticInfo += "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; }";
+  // diagnosticInfo += "h1 { text-align: center; border: 3px solid; max-width: 400px; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 10px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }";
+  // diagnosticInfo += "form { max-width: 400px; margin: 0 auto; }";
+  // diagnosticInfo += "label { display: block; margin-bottom: 5px; }";
+  // diagnosticInfo += "input[type='range'] { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; }";
+  // diagnosticInfo += "input[type='submit'], input[type='button'] { width: 100%; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }";
+  // diagnosticInfo += "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }";
+  // diagnosticInfo += "p { text-align: center; font-size: 10px; margin-top: 20px; }"; // Updated style for the paragraph
+  // diagnosticInfo += "#signalStrength { margin-bottom: 10px; }";
+  // diagnosticInfo += "</style></head><body>";
+  // String diagnosticInfo = "<!DOCTYPE html><html><head>";
+  // diagnosticInfo += "<link rel='stylesheet' type='text/css' href='/style.css'>";
+  // diagnosticInfo += "<script>";
+  // diagnosticInfo += "function toggleSwitch(element) {";
+  // diagnosticInfo += "  element.checked = !element.checked;";
+  // diagnosticInfo += "}";
+  // diagnosticInfo += "</script>";
+  // diagnosticInfo += "</head><body>";
 
   // Add diagnostic content
-  diagnosticInfo += "<h1>DayPix Diagnostics</h1>";
+  String diagnosticInfo = "<h1>DayPix Diagnostics</h1>";
   diagnosticInfo += "<p>Free Heap: " + String(ESP.getFreeHeap()) + " bytes</p>";
   diagnosticInfo += "<p>Received universe: " + String(recvUniverse) + "</p>";
 
@@ -782,26 +788,30 @@ void handleDiagnostic(AsyncWebServerRequest* request) {
 
   // Add buttons for tests
   diagnosticInfo += "<form id='identifyForm' method='post'>";
-  diagnosticInfo += "<input type='button' value='16bitTest' onclick='runTest(\"16bit\")' style='margin-top: 10px;'>";
+  diagnosticInfo += "<input type='button' value='16bitTest' onclick='runTest(\"16bitTest\")'>";
   diagnosticInfo += "</form>";
 
   diagnosticInfo += "<form id='identifyForm' method='post'>";
-  diagnosticInfo += "<input type='button' value='8bitTest' onclick='runTest(\"8bit\")' style='margin-top: 10px;'>";
+  diagnosticInfo += "<input type='button' value='8bitTest' onclick='runTest(\"8bitTest\")'>";
   diagnosticInfo += "</form>";
 
   diagnosticInfo += "<form id='identifyForm' method='post'>";
-  diagnosticInfo += "<input type='button' value='blankLEDSTest' onclick='runTest(\"blankLEDS\")' style='margin-top: 10px;'>";
+  diagnosticInfo += "<input type='button' value='blankLEDSTest' onclick='runTest(\"blankLEDSTest\")'>";
+  diagnosticInfo += "</form>";
+
+  diagnosticInfo += "<form id='ResetDefault' method='post'>";
+  diagnosticInfo += "<input type='button' value='ResetToDefault' onclick='runTest(\"ResetToDefault\")'>";
   diagnosticInfo += "</form>";
 
   diagnosticInfo += "<form id='Config' method='post'>";
-  diagnosticInfo += "<input type='button' value='Config' onclick='window.location.href=\"/\"' style='margin-top: 10px;'>";
+  diagnosticInfo += "<input type='button' value='Config' onclick='window.location.href=\"/\"'>";
   diagnosticInfo += "</form>";
 
   // Include JavaScript for AJAX
   diagnosticInfo += "<script>";
   diagnosticInfo += "function runTest(testType) {";
   diagnosticInfo += "var xhttp = new XMLHttpRequest();";
-  diagnosticInfo += "xhttp.open('POST', '/' + testType + 'Test', true);";
+  diagnosticInfo += "xhttp.open('POST', '/' + testType, true);";
   diagnosticInfo += "xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');";
   diagnosticInfo += "xhttp.send();";
   diagnosticInfo += "}";
@@ -873,7 +883,7 @@ void handleDiagnostic(AsyncWebServerRequest* request) {
   diagnosticInfo += "updateSignalStrength();";
   diagnosticInfo += "</script>";
   // Send the diagnostic information as HTML
-  request->send(200, "text/html", diagnosticInfo);
+  request->send(200, "text/html",html_header + diagnosticInfo);
 }
 
 
@@ -889,6 +899,12 @@ void handle8BitTest(AsyncWebServerRequest* request) {
   led._8bTest();
   Serial.println("8-bit test completed");
   request->send(200, "text/plain", "8-bit test completed!");
+}
+void handleResetToDefault(AsyncWebServerRequest* request) {
+  Serial.println("Resetting to default...");
+  resetToDefault();
+  request->send(200, "text/plain", "Default settings restored!");
+  effects.colorPulseBreathing(200,  20);
 }
 
 void handleRainbow(AsyncWebServerRequest* request) {
@@ -1016,10 +1032,10 @@ void handleSave(AsyncWebServerRequest* request) {
     </script>
   )";
 
-  String responseHtml = "<html><head><style>body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; }</style></head><body><h1>Settings saved! Rebooting in <span id=\"countdown\">10</span> ..." + redirectScript + "</h1></body></html>";
+  String responseHtml = "<h1>Settings saved! Rebooting in <span id=\"countdown\">10</span> ..." + redirectScript + "</h1></body></html>";
 
 
-  request->send(200, "text/html", responseHtml);
+  request->send(200, "text/html", html_header + responseHtml);
 
   // set the wifi pass and ssid
   WiFi.begin(ssid.c_str(), password.c_str());
@@ -1172,7 +1188,7 @@ void startAccessPoint(bool waitForClient) {
   });
   if (waitForClient){
     // Start the web server
-    server.begin();
+    //server.begin();
     int numStations = WiFi.softAPgetStationNum();
     while (numStations <= 0) {
       if (!b_silent){
