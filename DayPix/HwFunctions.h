@@ -11,4 +11,5 @@ void setupHw();
 void initializeEEPROM();
 void resetToDefault();
 void writeConfigFile();
+void logToFile(String message);
 #endif

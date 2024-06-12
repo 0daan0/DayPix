@@ -4,9 +4,9 @@
 
 #include <Arduino.h>
 // Define macros for different hardware platforms
-#define XIAO_ESP32C3
+//#define XIAO_ESP32C3
 //#define XIAO_ESP32S3
-//#define ESP_ETH01
+#define ESP_ETH01
 
 
 class ledDriver {
@@ -32,6 +32,7 @@ public:
   void showBufferP2();
   void blankLEDS(int nrToblank);
   void ledOn();
+  void setGamma(float gamma);
   void blink(int nrs, int delayTime);
   void _8bTest();
   void _16bTest();

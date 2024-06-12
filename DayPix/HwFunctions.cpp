@@ -15,7 +15,14 @@ void rstWdt(){
 void reset(){
    ESP.restart();
 }
-
+void logToFile(String message){
+  File logFile = SPIFFS.open("/system.log", FILE_WRITE, true);
+  if (!logFile) {
+    Serial.println("Failed to open log file for writing");
+    return;
+  }
+  logFile.println(message);
+}
 void writeConfigFile() {
   File configFile = SPIFFS.open("/config.cfg", FILE_WRITE, true);
   if (!configFile) {
@@ -27,6 +34,22 @@ void writeConfigFile() {
   configFile.println(String("SSID=") + getStoredString(SSID_EEPROM_ADDR));
   configFile.println(String("Password=") +  getStoredString(PASS_EEPROM_ADDR));
   configFile.println(String("DeviceName=") + getStoredString(DEV_NAME_EEPROM_ADDR));
+  configFile.println(String("Universe=") + getStoredString(UNIVERSE_EEPROM_ADDR));
+  configFile.println(String("DMXAddr=") + getStoredString(DMX_ADDR_EEPROM_ADDR));
+  configFile.println(String("NrLeds=") + getStoredString(NRLEDS_EEPROM_ADDR));
+  configFile.println(String("UniverseStart=") + getStoredString(UNIVERSE_START_EEPROM_ADDR));
+  configFile.println(String("UniverseEnd=") + getStoredString(UNIVERSE_END_EEPROM_ADDR));
+  configFile.println(String("16bit=") + getStoredString(B_16BIT_EEPROM_ADDR));
+  configFile.println(String("Failover=") + getStoredString(B_FAILOVER_EEPROM_ADDR));
+  configFile.println(String("Silent=") + getStoredString(B_SILENT_EEPROM_ADDR));
+  configFile.println(String("Reverse=") + getStoredString(B_REVERSE_ARRAY_EEPROM_ADDR));
+  configFile.println(String("DHCP=") + getStoredString(B_DHCP_EEPROM_ADDR));
+  configFile.println(String("IP=") + getStoredString(IP_ADDR_EEPROM_ADDR));
+  configFile.println(String("Subnet=") + getStoredString(IP_SUBNET_EEPROM_ADDR));
+  configFile.println(String("Gateway=") + getStoredString(IP_GATEWAY_EEPROM_ADDR));
+  configFile.println(String("DNS=") + getStoredString(IP_DNS_EEPROM_ADDR));
+  configFile.println(String("FMversion=") + FIRMWARE_VERSION); 
+
   // TODO: extend with all config
   configFile.close();
   Serial.println("Config file written successfully");

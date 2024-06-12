@@ -19,6 +19,19 @@
 AsyncWebServer server(80);
 RGBEffects effects;
 
+ String redirectScript = R"(
+    <script>
+      var count = 10;
+      var countdown = setInterval(function() {
+        document.getElementById("countdown").innerHTML = count;
+        count--;
+        if (count < 0) {
+          clearInterval(countdown);
+          window.history.back();
+        }
+      }, 1000);
+    </script>
+  )";
 
   String html_header = "<!DOCTYPE html><html><head>"
                       "<link rel='stylesheet' type='text/css' href='/style.css'>"
@@ -323,6 +336,7 @@ void setupWebServer() {
   server.on("/", HTTP_GET, handleRoot);
   server.on("/save", HTTP_POST, handleSave);
   server.on("/ledcontrol", HTTP_POST, handleLedControl);
+  server.on("/gamma", HTTP_POST, handleGamma);
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest* request) {
     request->send(200, "text/html", "<h1>Updating...</h1>");
   }, handleUpdate);
@@ -568,6 +582,22 @@ void handleSetDiag(AsyncWebServerRequest* request) {
   }
   request->send(200, "text/plain", "Diagnostic flag updated");
 }
+void handleGamma(AsyncWebServerRequest* request) {
+ 
+  // Check if the request has a body
+  if (request->hasArg("gamma")) {
+      // Read the body of the request
+      String body = request->arg("gamma");
+      float gamma = body.toFloat();
+      led.setGamma(gamma);
+      
+      // Respond with a success message
+      request->send(200, "text/plain", "Gamma updated successfully");
+  } else {
+      // If the request body is missing, respond with an error message
+      request->send(400, "text/plain", "Missing request body");
+  }
+}
 
 void handleLedControl(AsyncWebServerRequest* request) {
  
@@ -596,15 +626,6 @@ void handleLedControl(AsyncWebServerRequest* request) {
 void handleRoot(AsyncWebServerRequest* request) {
   loginUser(request);
 
-  //  String html = "<!DOCTYPE html><html><head>";
-  //  html += "<link rel='stylesheet' type='text/css' href='/style.css'>";
-  //  html += "<script>";
-  //  html += "function toggleSwitch(element) {";
-  //  html += "  element.checked = !element.checked;";
-  //  html += "}";
-  //  html += "</script>";
-  //  html += "</head><body>";
-
   // Title header 1
   String html = "<h1>" + String(H_PRFX) + " Config</h1>";
 
@@ -630,15 +651,43 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "DNS Server: <input type='text' name='dnsServer' value='" + String(getStoredString(IP_DNS_EEPROM_ADDR)) + "'><br>";
   html += "</div>";
 
-  html += "<script>";
-  html += "document.getElementById('dhcpCheckbox').addEventListener('change', function() {";
-  html += "if (this.checked) {";
-  html += "document.getElementById('manualConfig').style.display = 'none';";
-  html += "} else {";
-  html += "document.getElementById('manualConfig').style.display = 'block';";
-  html += "}";
-  html += "});";
-  html += "</script>";
+html += "<script>";
+html += "document.addEventListener('DOMContentLoaded', function() {";
+html += "  const gammaSlider = document.getElementById('gammaSlider');";
+html += "  const gammaValue = document.getElementById('gammaValue');";
+html += "  gammaSlider.addEventListener('input', updateGamma);";
+
+html += "  function updateGamma() {";
+html += "    const gamma = parseFloat(gammaSlider.value).toFixed(2);"; // Ensuring the gamma value is a float
+html += "    gammaValue.textContent = gamma;"; // Update the displayed value
+html += "    fetch('/gamma', {";
+html += "      method: 'POST',";
+html += "      headers: {";
+html += "        'Content-Type': 'application/x-www-form-urlencoded'";
+html += "      },";
+html += "      body: 'gamma=' + encodeURIComponent(gamma)"; // Correctly formatting the body
+html += "    })";
+html += "    .then(response => {";
+html += "      if (response.ok) {";
+html += "        console.log('Gamma updated successfully');";
+html += "      } else {";
+html += "        console.error('Failed to update gamma');";
+html += "      }";
+html += "    })";
+html += "    .catch(error => {";
+html += "      console.error('Error:', error);";
+html += "    });";
+html += "  }";
+
+html += "  document.getElementById('dhcpCheckbox').addEventListener('change', function() {";
+html += "    if (this.checked) {";
+html += "      document.getElementById('manualConfig').style.display = 'none';";
+html += "    } else {";
+html += "      document.getElementById('manualConfig').style.display = 'block';";
+html += "    }";
+html += "  });";
+html += "});";
+html += "</script>";
 
   // Main form for DMX/Artnet config input
   html += "<h3> ArtNet/DMX Settings </h3>";
@@ -692,6 +741,12 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "<h4>Normal mode: Lowest address = first LED outwards from the controller</h4>";
   html += "<h4>Reverse mode: Highest address = first LED outwards from the controller</h4>";
   html += "<h4>NOTE: Default color space is BGR in reverse order this will be RGB</h4>";
+
+html += "<label for='gammaSlider' style='font-size: 1.5rem;'>Gamma:</label><br>";
+html += "<input type='range' id='gammaSlider' name='gamma' min='0.01' max='5' step='0.01' value='"+ String(GAMMA_CORRECTION)+"' oninput='updateGammaValue()'><br>";
+html += "<span id='gammaValue' style='font-size: 1.5rem;'>"+ String(GAMMA_CORRECTION)+"</span><br>"; // Initial value
+
+
 
   // Add the Identify button with spacing
   html += "<form id='saveForm' action='/save' method='post'>";
@@ -752,31 +807,11 @@ void handleReboot(AsyncWebServerRequest* request) {
 void handleDiagnostic(AsyncWebServerRequest* request) {
   loginUser(request);
 
-  // Gather diagnostic information
-  // String diagnosticInfo = "<html><head><style>";
-  // diagnosticInfo += "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; }";
-  // diagnosticInfo += "h1 { text-align: center; border: 3px solid; max-width: 400px; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 10px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }";
-  // diagnosticInfo += "form { max-width: 400px; margin: 0 auto; }";
-  // diagnosticInfo += "label { display: block; margin-bottom: 5px; }";
-  // diagnosticInfo += "input[type='range'] { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 1px solid #EFEFE0; }";
-  // diagnosticInfo += "input[type='submit'], input[type='button'] { width: 100%; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }";
-  // diagnosticInfo += "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }";
-  // diagnosticInfo += "p { text-align: center; font-size: 10px; margin-top: 20px; }"; // Updated style for the paragraph
-  // diagnosticInfo += "#signalStrength { margin-bottom: 10px; }";
-  // diagnosticInfo += "</style></head><body>";
-  // String diagnosticInfo = "<!DOCTYPE html><html><head>";
-  // diagnosticInfo += "<link rel='stylesheet' type='text/css' href='/style.css'>";
-  // diagnosticInfo += "<script>";
-  // diagnosticInfo += "function toggleSwitch(element) {";
-  // diagnosticInfo += "  element.checked = !element.checked;";
-  // diagnosticInfo += "}";
-  // diagnosticInfo += "</script>";
-  // diagnosticInfo += "</head><body>";
-
   // Add diagnostic content
   String diagnosticInfo = "<h1>DayPix Diagnostics</h1>";
   diagnosticInfo += "<p>Free Heap: " + String(ESP.getFreeHeap()) + " bytes</p>";
   diagnosticInfo += "<p>Received universe: " + String(recvUniverse) + "</p>";
+  diagnosticInfo += "<p>IP Address: " + String(CURR_IP) + "</p>";
 
   diagnosticInfo += "</select><br>";
   diagnosticInfo += "<div id='signalStrength'></div>";
@@ -801,6 +836,10 @@ void handleDiagnostic(AsyncWebServerRequest* request) {
 
   diagnosticInfo += "<form id='ResetDefault' method='post'>";
   diagnosticInfo += "<input type='button' value='ResetToDefault' onclick='runTest(\"ResetToDefault\")'>";
+  diagnosticInfo += "</form>";
+
+  diagnosticInfo += "<form id='Filesystem' method='post'>";
+  diagnosticInfo += "<input type='button' value='Filesystem' onclick='window.location.href=\"fs\"'>";
   diagnosticInfo += "</form>";
 
   diagnosticInfo += "<form id='Config' method='post'>";
@@ -939,6 +978,10 @@ void handleSignalStrength(AsyncWebServerRequest* request) {
 
 void handleSave(AsyncWebServerRequest* request) {
   loginUser(request);
+  
+  String responseHtml = "<h1>Settings saved! Rebooting in <span id=\"countdown\">10</span> ..." + redirectScript + "</h1></body></html>";
+  request->send(200, "text/html", html_header + responseHtml);
+  delay(100);
   // Get values from webinterface
   String ssid = request->arg("ssid");
   String password = request->arg("password");
@@ -998,6 +1041,7 @@ void handleSave(AsyncWebServerRequest* request) {
   storeString(IP_SUBNET_EEPROM_ADDR, subnet);
   storeString(IP_GATEWAY_EEPROM_ADDR, gateway);
   storeString(IP_DNS_EEPROM_ADDR, dns);
+  storeFloat(GAMMA_VALUE_EEPROM_ADDR, GAMMA_CORRECTION);
 
   Serial.println("Received values from the web interface:");
   Serial.print("SSID: ");
@@ -1018,33 +1062,15 @@ void handleSave(AsyncWebServerRequest* request) {
   Serial.println(universe_end);
   // Store in memory
 
-  String redirectScript = R"(
-    <script>
-      var count = 10;
-      var countdown = setInterval(function() {
-        document.getElementById("countdown").innerHTML = count;
-        count--;
-        if (count < 0) {
-          clearInterval(countdown);
-          window.history.back();
-        }
-      }, 1000);
-    </script>
-  )";
+ 
 
-  String responseHtml = "<h1>Settings saved! Rebooting in <span id=\"countdown\">10</span> ..." + redirectScript + "</h1></body></html>";
-
-
-  request->send(200, "text/html", html_header + responseHtml);
-
-  // set the wifi pass and ssid
-  WiFi.begin(ssid.c_str(), password.c_str());
-  delay(1000);
   // blink led
-  led.ledOn();
+  if (!b_silent > 0){
+    led.ledOn();
+  } 
   // delay to let memory written 
-  delay(2000);
   Serial.print("Restarting");
+  delay(50);
   // restart
   ESP.restart();
 }
@@ -1118,6 +1144,30 @@ void storeString(int address, const String& value) {
   EEPROM.write(address + value.length(), '\0'); // Append termination character
   EEPROM.commit();
 
+}
+void storeFloat(int addr, float value) {
+  // Serialize the float value into a byte array
+  byte floatBytes[sizeof(float)];
+  memcpy(floatBytes, &value, sizeof(float));
+
+  // Write each byte of the serialized float to EEPROM
+  for (int i = 0; i < sizeof(float); i++) {
+    EEPROM.write(addr + i, floatBytes[i]);
+  }
+}
+
+float getStoredFloat(int addr) {
+  // Read the serialized bytes from EEPROM
+  byte floatBytes[sizeof(float)];
+  for (int i = 0; i < sizeof(float); i++) {
+    floatBytes[i] = EEPROM.read(addr + i);
+  }
+
+  // Reconstruct the float value from the byte array
+  float value;
+  memcpy(&value, floatBytes, sizeof(float));
+
+  return value;
 }
 
 void storeByte(int address, uint8_t value) {

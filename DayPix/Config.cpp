@@ -31,9 +31,10 @@ String IP_DNS = "192.168.1.1";
 String H_PRFX = "DayPix";
 String DEV_NAME = "";
 String HOST_NAME;
+String CURR_IP ="";
 const char* www_username = "admin";
 const char* www_password = "admin";
-String FIRMWARE_VERSION = "1.2.3";
+String FIRMWARE_VERSION = "1.24";
 float GAMMA_CORRECTION = 1.8;
 const char* APpass = "setupdaypix";
 

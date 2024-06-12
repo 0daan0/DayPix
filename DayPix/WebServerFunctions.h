@@ -25,11 +25,14 @@ void handleSetDiag(AsyncWebServerRequest* request);
 void handleRainbow(AsyncWebServerRequest* request);
 void handleResetToDefault(AsyncWebServerRequest* request);
 void handleFileUpload(AsyncWebServerRequest* request);
+void handleGamma(AsyncWebServerRequest* request);
 
 String getStoredString(int address);
 int getStoredInt(int address);
 void storeString(int address, const String& value);
 void storeByte(int address, uint8_t value);
+void storeFloat(int address, float value);
+float getStoredFloat(int address);
 
 void startAccessPoint(bool waitForClient);
 

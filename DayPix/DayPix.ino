@@ -247,7 +247,10 @@ if (longPressDetected) {
   String storedSubnet = getStoredString(IP_SUBNET_EEPROM_ADDR);
   String storedGateway = getStoredString(IP_GATEWAY_EEPROM_ADDR);
   String storedDNS = getStoredString(IP_DNS_EEPROM_ADDR);
-
+  float storedGamma = getStoredFloat(GAMMA_VALUE_EEPROM_ADDR);
+  if (storedGamma >= 0.01) {
+      GAMMA_CORRECTION = storedGamma;
+  }
   // Set configuration parameters
   universe1 = storedUniverse.toInt();
   NrOfLeds = storedNrofLEDS.toInt();
@@ -361,6 +364,7 @@ if (longPressDetected) {
     if(ETH.linkUp()) {
       Serial.println("Ethernet connected");
       Serial.println(ETH.localIP());
+      CURR_IP = String(ETH.localIP());
       bEth = true;
     }
   #endif
@@ -399,6 +403,7 @@ if (longPressDetected) {
       } else {
         Serial.println("Connected to WiFi");
         Serial.println(WiFi.localIP());
+        CURR_IP = String(WiFi.localIP());
         Serial.print("WiFi Hostname: ");
         Serial.println(WiFi.getHostname());
       }

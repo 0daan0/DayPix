@@ -600,6 +600,10 @@ void ledDriver::setLEDColor16bit(int r ,int g, int b)
     blankLEDS(179);
  }
   
+void ledDriver::setGamma(float gamma){
+  //logToFile(String(gamma));
+  GAMMA_CORRECTION = gamma;
+}
 void ledDriver::cFlash() {
   ledDriver instance;  // Create an instance of the ledDriver class
     for (int t = 0; t < 2; ++t) {
