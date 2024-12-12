@@ -5,6 +5,7 @@
 #include <ESPAsyncWebSrv.h>
 #include "LedDriver.h"
 #include <DNSServer.h>
+#include <esp_eth.h>
 
 extern AsyncWebServer server;
 extern ledDriver led; 
@@ -26,6 +27,7 @@ void handleRainbow(AsyncWebServerRequest* request);
 void handleResetToDefault(AsyncWebServerRequest* request);
 void handleFileUpload(AsyncWebServerRequest* request);
 void handleGamma(AsyncWebServerRequest* request);
+void applyLEDEffectFromFile(const String& effectFile);
 
 String getStoredString(int address);
 int getStoredInt(int address);

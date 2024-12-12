@@ -12,7 +12,7 @@ uint8_t universe3 = 2;
 uint8_t universe2 = 1;
 uint8_t universe1 = 0;  // Initialization
 String recvUniverse = " ";
-int NrOfLeds = 13;
+int NrOfLeds = 104;
 int DmxAddr = 0;
 bool b_APmode = false;
 int b_16Bit = 0;
@@ -34,7 +34,7 @@ String HOST_NAME;
 String CURR_IP ="";
 const char* www_username = "admin";
 const char* www_password = "admin";
-String FIRMWARE_VERSION = "1.24";
+String FIRMWARE_VERSION = "1.27";
 float GAMMA_CORRECTION = 1.8;
 const char* APpass = "setupdaypix";
 

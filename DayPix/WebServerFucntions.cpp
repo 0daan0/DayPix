@@ -3,6 +3,7 @@
 #include "WebServerFunctions.h"
 #include "Config.h"
 #include "css_style.h"
+#include "fxExample.h"
 #include "LedDriver.h"  // Include this line
 #include <EEPROM.h>
 #include <ArduinoOTA.h>
@@ -70,48 +71,59 @@ void loginUser(AsyncWebServerRequest* request)
 
 void applyLEDEffectFromFile(const String& effectFile) {
     //char *filenameCopy = strdup(effectFile.c_str());
-    Serial.println("trying to apply effect"+ effectFile);
+    Serial.println("trying to apply effect" + effectFile);
     File file = SPIFFS.open("/" + effectFile, "r");
     if (!file) {
-        Serial.println("Failed to open file for reading"+ effectFile);
+        Serial.println("Failed to open file for reading" + effectFile);
         return;
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);  // Adjust delay as needed
-     // Read the file and apply the LED effects
-        bool configRead = false; // Flag to track if configuration is read
-        int nrLeds = 1; // Default value for nrLeds
-        int fx_repeat = 1; // Default value for fx_repeat
-        
-        while (fx_repeat > 0) {
-            // Reset file pointer to the beginning of the file for each repetition
-            file.seek(0);
-            
-            while (file.available()) {
-                String line = file.readStringUntil('\n');
-                line.trim();
-                if (line.length() == 0) continue; // Skip empty lines
+    String fileContents = file.readString();  // Load entire file into memory
+    file.close();  // Close after reading to avoid repeated flash access
 
-                // If configuration is not yet read, parse the configuration
-                if (!configRead && line.startsWith("nrLeds=") && line.indexOf(", fx_repeat=") != -1) {
-                    sscanf(line.c_str(), "nrLeds=%d, fx_repeat=%d", &nrLeds, &fx_repeat);
-                    configRead = true;
-                    continue; // Skip processing configuration line
+    // Parse and apply the LED effects
+    bool configRead = false; // Flag to track if configuration is read
+    int nrLeds = 1; // Default value for nrLeds
+    int fx_repeat = 0; // Default value for fx_repeat
+    bool infiniteLoop = false; // Flag for infinite loop
+
+    do {
+        int lineStart = 0;
+        while (lineStart < fileContents.length()) {
+            int lineEnd = fileContents.indexOf('\n', lineStart);
+            if (lineEnd == -1) lineEnd = fileContents.length();  // Last line
+
+            String line = fileContents.substring(lineStart, lineEnd);
+            line.trim();
+            lineStart = lineEnd + 1;
+
+            if (line.length() == 0) continue; // Skip empty lines
+
+            // Parse configuration line
+            if (!configRead && line.startsWith("nrLeds=") && line.indexOf(", fx_repeat=") != -1) {
+                sscanf(line.c_str(), "nrLeds=%d, fx_repeat=%d", &nrLeds, &fx_repeat);
+                configRead = true;
+                if (fx_repeat == 0) {
+                    infiniteLoop = true; // Set infinite loop flag if fx_repeat is 0
                 }
-
-                // Process LED effect lines
-                int r, g, b, delayTime;
-                sscanf(line.c_str(), "%d,%d,%d,%d", &r, &g, &b, &delayTime);
-
-                led.setLEDColor(r, g, b, nrLeds);
-                delay(delayTime);
-                rstWdt();
+                continue; // Skip processing configuration line
             }
-            fx_repeat--;
-        }
-        led.blankLEDS(170);
-         file.close();
 
+            // Process LED effect lines
+            int r, g, b, delayTime;
+            sscanf(line.c_str(), "%d,%d,%d,%d", &r, &g, &b, &delayTime);
+
+            led.setLEDColor(r, g, b, nrLeds);
+            delay(delayTime);
+            rstWdt();
+        }
+
+        if (!infiniteLoop && fx_repeat > 0) fx_repeat--;
+    } while (infiniteLoop || fx_repeat > 0);
+
+    led.blankLEDS(170);
 }
+
 
 void applyLEDEffectFromFileTask(void *parameter) {
     char *filename = (char*)parameter;
@@ -135,6 +147,21 @@ void setupWebServer() {
     }
   }
   
+  if (!SPIFFS.exists("/fxExample.fx")) {
+    Serial.println("FX file not found, will create new file");
+    File fx_file = SPIFFS.open("/fxExample.fx", FILE_WRITE, true);
+
+    if (fx_file) {
+        if (fx_file.print(fxExample)) {
+            Serial.println("Successfully wrote fxExample to fxExample.fx");
+        } else {
+            Serial.println("ERROR: Writing to fxExample.fx failed");
+        }
+        fx_file.close();
+    } else {
+        Serial.println("ERROR: Failed to open fxExample.fx for writing");
+    }
+  }
     // Set up endpoints for web server
   server.on("/diagnostic", HTTP_GET, handleDiagnostic);
   server.on("/8bitTest", HTTP_POST, handle8BitTest);
@@ -746,6 +773,8 @@ html += "<label for='gammaSlider' style='font-size: 1.5rem;'>Gamma:</label><br>"
 html += "<input type='range' id='gammaSlider' name='gamma' min='0.01' max='5' step='0.01' value='"+ String(GAMMA_CORRECTION)+"' oninput='updateGammaValue()'><br>";
 html += "<span id='gammaValue' style='font-size: 1.5rem;'>"+ String(GAMMA_CORRECTION)+"</span><br>"; // Initial value
 
+// feed watchdog 
+ rstWdt(); 
 
 
   // Add the Identify button with spacing
@@ -773,7 +802,7 @@ html += "<span id='gammaValue' style='font-size: 1.5rem;'>"+ String(GAMMA_CORREC
   html += "</form>";
   html += "<p>Firmware Version: " + String(FIRMWARE_VERSION) + "</p>";
   html += "<p>HW Version: " + String(ledDriverInstance.hwVersion) + "</p>";
-  html += "<p>Daniel Guurink-Hoogerwerf</p>";
+  html += "<p>Xentek</p>";
   html += "<a href='/diagnostic'>Diagnostics</a><br>";
 
   // Script for identify button
@@ -795,6 +824,7 @@ html += "<span id='gammaValue' style='font-size: 1.5rem;'>"+ String(GAMMA_CORREC
   html += "</body></html>";
 
   request->send(200, "text/html",html_header + html);
+  rstWdt(); 
 }
 
 

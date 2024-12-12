@@ -22,11 +22,14 @@ ArtnetReceiver artnet;
 ArtnetWiFiReceiver artnet;
 #endif
 // DMX array data
-const uint8_t* bdata;
-uint16_t bsize;
-
-const uint8_t* bdata2;
-uint16_t bsize2;
+// Global variables to store data and size
+const uint8_t* bdata1 = nullptr;
+const uint8_t* bdata2 = nullptr;
+uint16_t bsize1 = 0;
+uint16_t bsize2 = 0;
+bool u1rec = false;
+bool u2rec = false;
+bool callback1_done = false;
 
 ledDriver led;
 RGBEffects effect;
@@ -40,24 +43,52 @@ void callback(const uint8_t* data, const uint16_t size) {
   if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
       // The recvUniverse does not contain artnet.universe(), so add it
       recvUniverse += "U" + String(artnet.universe()) + "U";
-    }
-  led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
+    }  
+    led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
 }
 
 void callback1(const uint8_t* data, const uint16_t size) {
- if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-      recvUniverse += "U" + String(artnet.universe()) + "U";
-  }
-  led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
+    if (recvUniverse.indexOf("U" + String(artnet.universe()) + "U") == -1) {
+        recvUniverse += "U" + String(artnet.universe()) + "U";   
+    }
+    if (!callback1_done) {
+        bdata1 = data;
+        bsize1 = size;
+        u1rec = true;
+        callback1_done = true;
+        checkAndWritePixelBuffer();
+    }
 }
 
 void callback2(const uint8_t* data, const uint16_t size) {
-  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-      recvUniverse += "U" + String(artnet.universe()) + "U";
-  }
-  led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
-
+    if (recvUniverse.indexOf("U" + String(artnet.universe()) + "U") == -1) {
+        recvUniverse += "U" + String(artnet.universe()) + "U";
+    }
+    if (callback1_done) {
+        bdata2 = data;
+        bsize2 = size;
+        u2rec = true;
+        checkAndWritePixelBuffer();
+    }
 }
+
+void checkAndWritePixelBuffer() {
+    if (u1rec && u2rec) {
+        // Combine data from both callbacks if needed
+        // For simplicity, assuming bdata1 and bdata2 can be concatenated
+        uint8_t combinedData[bsize1 + bsize2];
+        memcpy(combinedData, bdata1, bsize1);
+        memcpy(combinedData + bsize1, bdata2, bsize2);
+        
+        led.writePixelBuffer(combinedData, bsize1 + bsize2, NrOfLeds, DmxAddr, 0);
+        
+        // Reset flags
+        u1rec = false;
+        u2rec = false;
+        callback1_done = false;
+    }
+}
+
 void callback3(const uint8_t* data, const uint16_t size) {
   if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
       recvUniverse += "U" + String(artnet.universe()) + "U";
@@ -448,19 +479,22 @@ if (longPressDetected) {
   for (int i = 0; i < 15; i++) {
     artnet.unsubscribe(i);
   }
+  if (storedUniverseStart == storedUniverseEnd){
     // Subscribe callback to the first universe
-  artnet.subscribe(storedUniverseStart, callback);
-  Serial.println("Add universe listener for " + String(storedUniverseStart));
+    artnet.subscribe(storedUniverseStart, callback);
+    Serial.println("We only have one universe");
+    Serial.println("Add universe listener for " + String(storedUniverseStart));
+  }
 
-  // Subscribe callback to the second universe
+  // Subscribe callback to the second universe if needed
   if (storedUniverseStart + 1 <= storedUniverseEnd) {
-      artnet.subscribe(storedUniverseStart + 1, callback1);
+      artnet.subscribe(storedUniverseStart, callback1);
       Serial.println("Add universe listener for " + String(storedUniverseStart + 1));
   }
 
   // Subscribe callback2 to the third universe
-  if (storedUniverseStart + 2 <= storedUniverseEnd) {
-      artnet.subscribe(storedUniverseStart + 2, callback2);
+  if (storedUniverseStart + 1 <= storedUniverseEnd) {
+      artnet.subscribe(storedUniverseStart + 1, callback2);
       Serial.println("Add universe listener for " + String(storedUniverseStart + 2) + " for callback2");
   }
 
@@ -476,6 +510,8 @@ if (longPressDetected) {
 
   xTaskCreatePinnedToCore(otaTask, "OtaTask", 8192, NULL, 2, NULL, 1);
   Serial.println("Setup complete");
+  applyLEDEffectFromFile(String("boot.fx"));
+  
 #ifdef RST_BTN
  digitalWrite(sLED, LOW);
 #endif
@@ -488,6 +524,11 @@ void loop() {
   // while (!diag){
   //    artnet.parse();
   // set onboard leds
+  // if (u1rec == 1 && u2rec ==1 )
+  // {
+  //   u1rec =0;
+  //   u2rec =0;
+  // }
 #ifdef RST_BTN
   digitalWrite(rLED, HIGH);
 #endif
