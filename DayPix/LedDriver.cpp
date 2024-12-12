@@ -113,14 +113,17 @@ void reverseArray(uint8_t* array, const uint16_t size) {
 }
 
   // Write pixelbuffer data=DMX data, length=DMX data lenght, limit=number of leds, start=start addres (DMX addres), ofset=the amount of leds it needs to blank before writing data
-  void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset) {
+  void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset, bool latch) {
     // reset wdt
     rstWdt(); 
     uint16_t limit = b_16Bit ? nrOfleds * 6 : nrOfleds * 3;
     // set limit times 3 since each led has 3 values RGB, also add start address to the limit since we shift that amount of addresses.
     uint16_t end = limit + start;
-
+      if (latch){
       digitalWrite(latchPin, LOW);
+      }
+      
+      
       if (b_reverseArray == 0) {
           for (int i = std::min(length, end) - 1; i >= start; i--) {
               if (b_16Bit){
@@ -153,19 +156,21 @@ void reverseArray(uint8_t* array, const uint16_t size) {
           }
       }
       if (ledOfset > 0) {
-      digitalWrite(latchPin, LOW);
-      int ofset =  b_16Bit ? ledOfset * 6 : ledOfset * 3;
-      for (int j = 0; j < ofset; ++j) {
-        // just send data 0 to blank the channels
-        sendData(0, dataPin, clockPin);
+        if (latch){
+          digitalWrite(latchPin, LOW);
+        }
+        int ofset =  b_16Bit ? ledOfset * 6 : ledOfset * 3;
+        for (int j = 0; j < ofset; ++j) {
+          // just send data 0 to blank the channels
+          sendData(0, dataPin, clockPin);
+        }
+        if (latch){
+          digitalWrite(latchPin, HIGH);
+        }
       }
-      digitalWrite(latchPin, HIGH);
-    }
- 
-    
-     
-    
-    digitalWrite(latchPin, HIGH);
+      if (latch){
+        digitalWrite(latchPin, HIGH);
+      }
   }
 
 void ledDriver::reverseArray(uint8_t* array, const uint16_t size) {
@@ -231,8 +236,10 @@ void ledDriver::writePixelBuffer(const uint8_t* data, const uint16_t length, con
 */
   void ledDriver::showBuffer(){
 
-    digitalWrite(latchPin, HIGH);
-    digitalWrite(latchPin, LOW);
+    //digitalWrite(latchPin, HIGH);
+    //digitalWrite(latchPin, LOW);
+    //delay(5);
+     digitalWrite(latchPin, HIGH);
     //Serial.println("Latch");
   }
   void ledDriver::showBufferP2(){
@@ -528,13 +535,13 @@ void ledDriver::setLEDColor16bit(int r ,int g, int b)
     const uint8_t singlePixelData[] = { 0, 125, 0 };
     if (number == 1) {
       for (int i = 0; i < NumberOfLeds; ++i) {
-        writePixelBuffer(singlePixelData, sizeof(singlePixelData), NumberOfLeds, DmxAddress, i);
+        writePixelBuffer(singlePixelData, sizeof(singlePixelData), NumberOfLeds, DmxAddress, i, true);
       }
       delay(5000);
       const uint8_t singlePixelDatan[] = { 0, 0, 0 };
 
       for (int i = 0; i < NumberOfLeds; ++i) {
-        writePixelBuffer(singlePixelDatan, sizeof(singlePixelDatan), NumberOfLeds, DmxAddress, i);
+        writePixelBuffer(singlePixelDatan, sizeof(singlePixelDatan), NumberOfLeds, DmxAddress, i, true);
       }
     }
     if (number == 2) {
@@ -547,7 +554,7 @@ void ledDriver::setLEDColor16bit(int r ,int g, int b)
 
           // Display the color on each led on the RGB strip
           for (int i = 0; i < 1; ++i) {
-            writePixelBuffer(singlePixelData, sizeof(singlePixelData), 170, 0, i);
+            writePixelBuffer(singlePixelData, sizeof(singlePixelData), 170, 0, i, true);
             //sendData(singlePixelData[i], dataPin, clockPin);
           }
           
@@ -560,7 +567,7 @@ void ledDriver::setLEDColor16bit(int r ,int g, int b)
 
           // Display the color on each led on the RGB strip
           for (int i = 0; i < 1; ++i) {
-            writePixelBuffer(singlePixelData, sizeof(singlePixelData), 170, 0, i);
+            writePixelBuffer(singlePixelData, sizeof(singlePixelData), 170, 0, i, true);
             //sendData(singlePixelData[i], dataPin, clockPin);
           }
           delay(1);  // Adjust delay for speed
@@ -571,7 +578,7 @@ void ledDriver::setLEDColor16bit(int r ,int g, int b)
 
           // Display the color on each led on the RGB strip
           for (int i = 0; i < 1; ++i) {
-            writePixelBuffer(singlePixelData, sizeof(singlePixelData), 170, 0, i);
+            writePixelBuffer(singlePixelData, sizeof(singlePixelData), 170, 0, i, true);
             //sendData(singlePixelData[i], dataPin, clockPin);
           }
           delay(1);  // Adjust delay for speed
@@ -610,14 +617,14 @@ void ledDriver::cFlash() {
       for (int color = 0; color < 100; ++color) {
         const uint8_t singlePixelData[] = { static_cast<uint8_t>(color), 16, static_cast<uint8_t>(255 - color) };
         for (int i = 0; i < 1; ++i) {
-          instance.writePixelBuffer(singlePixelData, sizeof(singlePixelData), 179, 0, 0);
+          instance.writePixelBuffer(singlePixelData, sizeof(singlePixelData), 179, 0, 0, true);
         }
         delay(2);
       }
       for (int color = 100; color > 0; --color) {
         const uint8_t singlePixelData[] = { static_cast<uint8_t>(color), 0, static_cast<uint8_t>(0 + color) };
         for (int i = 0; i < 1; ++i) {
-          instance.writePixelBuffer(singlePixelData, sizeof(singlePixelData), 179, 0, 0);
+          instance.writePixelBuffer(singlePixelData, sizeof(singlePixelData), 179, 0, 0, true);
         }
         delay(3);
       }

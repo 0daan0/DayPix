@@ -20,6 +20,18 @@
 AsyncWebServer server(80);
 RGBEffects effects;
 
+// Define global variables to store the data in RAM
+String storedSSID;
+String storedPassword;
+String storedIPAddress;
+String storedSubnetMask;
+String storedGateway;
+String storedDNSServer;
+String storedUniverseStrStart;
+String storedUniverseStrEnd;
+String storedDMXAddr;
+String storedNrOfLeds;
+
  String redirectScript = R"(
     <script>
       var count = 10;
@@ -41,7 +53,7 @@ RGBEffects effects;
                       "  element.checked = !element.checked;"
                       "}"
                       "</script>"
-                      "</head><body>";
+                      "</head>";
 
 // Function to determine the MIME type based on the file extension
 String getContentType(String filename) {
@@ -57,6 +69,20 @@ String getContentType(String filename) {
     else if (filename.endsWith(".zip")) return "application/zip";
     else if (filename.endsWith(".gz")) return "application/x-gzip";
     return "text/plain";
+}
+
+// Function to read data from EEPROM and store it in RAM
+void readEEPROMData() {
+    storedSSID = getStoredString(SSID_EEPROM_ADDR);
+    storedPassword = getStoredString(PASS_EEPROM_ADDR);
+    storedIPAddress = getStoredString(IP_ADDR_EEPROM_ADDR);
+    storedSubnetMask = getStoredString(IP_SUBNET_EEPROM_ADDR);
+    storedGateway = getStoredString(IP_GATEWAY_EEPROM_ADDR);
+    storedDNSServer = getStoredString(IP_DNS_EEPROM_ADDR);
+    storedUniverseStrStart = getStoredString(UNIVERSE_START_EEPROM_ADDR);
+    storedUniverseStrEnd = getStoredString(UNIVERSE_END_EEPROM_ADDR);
+    storedDMXAddr = getStoredString(DMX_ADDR_EEPROM_ADDR);
+    storedNrOfLeds = getStoredString(NRLEDS_EEPROM_ADDR);
 }
 
 void loginUser(AsyncWebServerRequest* request)
@@ -133,7 +159,8 @@ void applyLEDEffectFromFileTask(void *parameter) {
 }
 
 void setupWebServer() {
-  
+
+  readEEPROMData();
   if (!SPIFFS.exists("/style.css")) {
     Serial.println("Style not found, will create new file");
     File style_css = SPIFFS.open("/style.css", FILE_WRITE, true);
@@ -401,8 +428,6 @@ server.on("/applyEffect", HTTP_POST, [](AsyncWebServerRequest *request){
    
 });
 
-
-
 server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
     // HTML for the LED control page
     String html = "<html><head><style>"
@@ -651,7 +676,7 @@ void handleLedControl(AsyncWebServerRequest* request) {
 }
 
 void handleRoot(AsyncWebServerRequest* request) {
-  loginUser(request);
+  //loginUser(request);
 
   // Title header 1
   String html = "<h1>" + String(H_PRFX) + " Config</h1>";
@@ -660,8 +685,8 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "<form action='/save' method='post'>";
   html += "<h3> Device/Network Settings </h3>";
   html += "Device Name    : <input type='text' name='devicename' value='" + DEV_NAME + "'><br>";
-  html += "WiFi SSID    : <input type='text' name='ssid' value='" + String(getStoredString(SSID_EEPROM_ADDR)) + "'><br>";
-  html += "WiFi Password: <input type='password' name='password' value='" + String(getStoredString(PASS_EEPROM_ADDR)) + "'><br>";
+  html += "WiFi SSID    : <input type='text' name='ssid' value='" + storedSSID + "'><br>";
+  html += "WiFi Password: <input type='password' name='password' value='" + storedPassword + "'><br>";
 
   if (led.ethCap) {
   html += "<input type='checkbox' id='failoverCheckbox' name='b_failover' " + String(b_failover ? "checked" : "") + " onclick='toggleFailover(this)'> <label for='failoverCheckbox'>Ethernet to Wifi Failover</label><br>";
@@ -672,10 +697,10 @@ void handleRoot(AsyncWebServerRequest* request) {
   html += "<h3>IP Configuration</h3>";
   html += "<input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + " onclick='toggleDHCP(this)'> Use DHCP<br>";
   html += "<div id='manualConfig' style='display: " +  String(b_dhcp ? "none" : "block") + ";'>";
-  html += "IP Address: <input type='text' name='ipAddress' value='" +String(getStoredString(IP_ADDR_EEPROM_ADDR)) + "'><br>";
-  html += "Subnet Mask: <input type='text' name='subnetMask' value='" + String(getStoredString(IP_SUBNET_EEPROM_ADDR)) + "'><br>";
-  html += "Gateway: <input type='text' name='gateway' value='" + String(getStoredString(IP_GATEWAY_EEPROM_ADDR)) + "'><br>";
-  html += "DNS Server: <input type='text' name='dnsServer' value='" + String(getStoredString(IP_DNS_EEPROM_ADDR)) + "'><br>";
+  html += "IP Address: <input type='text' name='ipAddress' value='" + storedIPAddress + "'><br>";
+  html += "Subnet Mask: <input type='text' name='subnetMask' value='" + storedSubnetMask + "'><br>";
+  html += "Gateway: <input type='text' name='gateway' value='" + storedGateway + "'><br>";
+  html += "DNS Server: <input type='text' name='dnsServer' value='" + storedDNSServer + "'><br>";
   html += "</div>";
 
 html += "<script>";
@@ -716,32 +741,35 @@ html += "  });";
 html += "});";
 html += "</script>";
 
+// feed watchdog 
+ rstWdt(); 
   // Main form for DMX/Artnet config input
+  html += "<body>";
   html += "<h3> ArtNet/DMX Settings </h3>";
   html += "Art-Net Universe Start: <select name='universe_start'>";
   for (int i = 0; i <= 15; ++i) {
-    html += "<option value='" + String(i) + "' " + (getStoredString(UNIVERSE_START_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
+    html += "<option value='" + String(i) + "' " + (storedUniverseStrStart.toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
   }
   html += "</select>";
   html += "Art-Net Universe End: <select name='universe_end'>";
   for (int i = 0; i <= 15; ++i) {
-    html += "<option value='" + String(i) + "' " + (getStoredString(UNIVERSE_END_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
+    html += "<option value='" + String(i) + "' " + (storedUniverseStrEnd.toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
   }
   html += "</select><br>";
 
   html += "DMX Start Addr  : <select name='DmxAddr'>";
   for (int i = 0; i <= 512; ++i) {
-    html += "<option value='" + String(i) + "' " + (getStoredString(DMX_ADDR_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
+    html += "<option value='" + String(i) + "' " + (storedDMXAddr.toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
   }
   html += "</select>";
 
   // Calculate DMX address range
-  int startAddr = getStoredString(DMX_ADDR_EEPROM_ADDR).toInt();
+  int startAddr = storedDMXAddr.toInt();
   int endAddr;
   if (b_16Bit) {
-    endAddr = startAddr + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() * 6 );
+    endAddr = startAddr + (storedNrOfLeds.toInt() * 6 );
   } else {
-    endAddr = startAddr + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() * 3 );
+    endAddr = startAddr + (storedNrOfLeds.toInt() * 3 );
   }
 
   html += "<br>";
@@ -754,7 +782,7 @@ html += "</script>";
     if (b_16Bit && i > 85) {
       break;
     }
-    html += "<option value='" + String(i) + "' " + (getStoredString(NRLEDS_EEPROM_ADDR).toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
+    html += "<option value='" + String(i) + "' " + (storedNrOfLeds.toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
   }
   html += "<select><br>";
   html += "<input type='checkbox' id='16_bitCheckbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + " onclick='toggle16bit(this)'> 16-bit Mode<br>";
@@ -773,9 +801,7 @@ html += "<label for='gammaSlider' style='font-size: 1.5rem;'>Gamma:</label><br>"
 html += "<input type='range' id='gammaSlider' name='gamma' min='0.01' max='5' step='0.01' value='"+ String(GAMMA_CORRECTION)+"' oninput='updateGammaValue()'><br>";
 html += "<span id='gammaValue' style='font-size: 1.5rem;'>"+ String(GAMMA_CORRECTION)+"</span><br>"; // Initial value
 
-// feed watchdog 
  rstWdt(); 
-
 
   // Add the Identify button with spacing
   html += "<form id='saveForm' action='/save' method='post'>";
@@ -820,17 +846,18 @@ html += "<span id='gammaValue' style='font-size: 1.5rem;'>"+ String(GAMMA_CORREC
   html += "xhttp.send();";
   html += "}";
   html += "</script>";
-
   html += "</body></html>";
-
+  //String response = html_header + html;
+  
   request->send(200, "text/html",html_header + html);
-  rstWdt(); 
+ 
 }
 
 
 void handleReboot(AsyncWebServerRequest* request) {
   loginUser(request);
   request->send(200, "text/plain", "Rebooting...");
+   rstWdt(); 
   delay(1000);
   ESP.restart();
 }

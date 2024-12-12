@@ -12,6 +12,7 @@
 #include <esp_eth.h>
 #include "HwFunctions.h"
 #include <Preferences.h>
+#include <freertos/semphr.h>
 
 #ifdef ETH_CAP
 #include <ArtnetETH.h>
@@ -21,72 +22,73 @@ ArtnetReceiver artnet;
 #include <ArtnetWiFi.h>
 ArtnetWiFiReceiver artnet;
 #endif
-// DMX array data
+
 // Global variables to store data and size
-const uint8_t* bdata1 = nullptr;
-const uint8_t* bdata2 = nullptr;
+uint8_t* bdata1[512];
+uint8_t* bdata2[512];
 uint16_t bsize1 = 0;
 uint16_t bsize2 = 0;
-bool u1rec = false;
-bool u2rec = false;
-bool callback1_done = false;
+volatile bool u1rec = false; 
+volatile bool u2rec = false; 
+SemaphoreHandle_t xMutex;
 
 ledDriver led;
 RGBEffects effect;
 #ifdef RST_BTN
  int rLED = IO5;
  int sLED = IO17;
-
 #endif
 
 void callback(const uint8_t* data, const uint16_t size) {    
-  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-      // The recvUniverse does not contain artnet.universe(), so add it
-      recvUniverse += "U" + String(artnet.universe()) + "U";
+    if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
+        // The recvUniverse does not contain artnet.universe(), so add it
+        recvUniverse += "U" + String(artnet.universe()) + "U";
     }  
-    led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0);
+    led.writePixelBuffer(data, size, NrOfLeds, DmxAddr, 0, true);
 }
 
 void callback1(const uint8_t* data, const uint16_t size) {
     if (recvUniverse.indexOf("U" + String(artnet.universe()) + "U") == -1) {
         recvUniverse += "U" + String(artnet.universe()) + "U";   
     }
-    if (!callback1_done) {
-        bdata1 = data;
-        bsize1 = size;
-        u1rec = true;
-        callback1_done = true;
-        checkAndWritePixelBuffer();
-    }
+    xSemaphoreTake(xMutex, portMAX_DELAY);
+    memcpy(bdata1, data, size);
+    bsize1 = size;
+    u1rec = true;
+    
+    xSemaphoreGive(xMutex);
+    checkAndWritePixelBuffer();
 }
 
 void callback2(const uint8_t* data, const uint16_t size) {
     if (recvUniverse.indexOf("U" + String(artnet.universe()) + "U") == -1) {
         recvUniverse += "U" + String(artnet.universe()) + "U";
     }
-    if (callback1_done) {
-        bdata2 = data;
-        bsize2 = size;
-        u2rec = true;
-        checkAndWritePixelBuffer();
-    }
+    xSemaphoreTake(xMutex, portMAX_DELAY); 
+    memcpy(bdata2, data, size);
+    bsize2 = size;
+    u2rec = true;
+    
+    xSemaphoreGive(xMutex);
+    checkAndWritePixelBuffer();
 }
 
 void checkAndWritePixelBuffer() {
+    xSemaphoreTake(xMutex, portMAX_DELAY);
+    
     if (u1rec && u2rec) {
-        // Combine data from both callbacks if needed
-        // For simplicity, assuming bdata1 and bdata2 can be concatenated
+        // Combine data from both callbacks by attaching them back-to-front
         uint8_t combinedData[bsize1 + bsize2];
         memcpy(combinedData, bdata1, bsize1);
         memcpy(combinedData + bsize1, bdata2, bsize2);
         
-        led.writePixelBuffer(combinedData, bsize1 + bsize2, NrOfLeds, DmxAddr, 0);
-        
+        led.writePixelBuffer(combinedData, bsize1 + bsize2, NrOfLeds * 2, DmxAddr, 0, true);
         // Reset flags
         u1rec = false;
         u2rec = false;
-        callback1_done = false;
     }
+    
+    xSemaphoreGive(xMutex);
 }
 
 void callback3(const uint8_t* data, const uint16_t size) {
@@ -106,10 +108,10 @@ void artnetTask(void* parameter) {
     }
   }
 }
-
+/*
 void artnetTask2(void* parameter) {
   while (1) {
-    led.writePixelBufferPort2(bdata2, bsize2, NrOfLeds, DmxAddr, 0);
+    led.writePixelBufferPort2(bdata2, bsize2, NrOfLeds, DmxAddr, 0, true);
     vTaskDelay(1 / portTICK_PERIOD_MS);  // Adjust delay as needed
 
     if (identify) {
@@ -122,7 +124,7 @@ void artnetTask2(void* parameter) {
     }
   }
 }
-
+*/
 
 #ifdef ETH_CAP
 void conGuardTask(void* parameter) {
@@ -161,7 +163,7 @@ void otaTask(void* parameter) {
 void setup() {
   // init serial for debugging
   Serial.begin(115200);
-  
+  xMutex = xSemaphoreCreateMutex();
   // WHY THIS DELAY?
   delay(500);
 
@@ -453,8 +455,9 @@ if (longPressDetected) {
   MDNS.addService("http", "tcp", 80);
   // Setup webserver if we are not in AP mode
   if (!b_APmode){
-  setupWebServer();
+    setupWebServer();
   }
+  //
   // display led effect when connected
   if (!b_silent > 0)
   {
@@ -487,22 +490,22 @@ if (longPressDetected) {
   }
 
   // Subscribe callback to the second universe if needed
-  if (storedUniverseStart + 1 <= storedUniverseEnd) {
+  if (storedUniverseStart < storedUniverseEnd) {
       artnet.subscribe(storedUniverseStart, callback1);
-      Serial.println("Add universe listener for " + String(storedUniverseStart + 1));
+      Serial.println("Add universe listener for " + String(storedUniverseStart));
   }
 
   // Subscribe callback2 to the third universe
   if (storedUniverseStart + 1 <= storedUniverseEnd) {
       artnet.subscribe(storedUniverseStart + 1, callback2);
-      Serial.println("Add universe listener for " + String(storedUniverseStart + 2) + " for callback2");
+      Serial.println("Add universe listener for " + String(storedUniverseStart + 1) + " for callback2");
   }
 
   // Subscribe callback2 to the fourth universe
-  if (storedUniverseStart + 3 <= storedUniverseEnd) {
-      artnet.subscribe(storedUniverseStart + 3, callback3);
-      Serial.println("Add universe listener for " + String(storedUniverseStart + 3) + " for callback2");
-  }
+  //if (storedUniverseStart + 2 <= storedUniverseEnd) {
+  //    artnet.subscribe(storedUniverseStart + 2, callback3);
+  //    Serial.println("Add universe listener for " + String(storedUniverseStart + 2) + " for callback2");
+  //}
 // #endregion
 
   // Begin OTA update

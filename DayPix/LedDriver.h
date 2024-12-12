@@ -20,7 +20,7 @@ public:
   void sendData(uint8_t value, int dataPin, int clockPin);
   void sendDataFast(uint8_t value, int dataPin, int clockPin);
   void sendData16Bit(uint16_t value, int dataPin, int clockPin);
-  void writePixelBuffer(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset);
+  void writePixelBuffer(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset, bool latch);
   void writePixelBufferFull(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset);
   void writePixelBufferPort2(const uint8_t* data, const uint16_t length, const uint16_t nrOfleds, const uint16_t start, const uint16_t ledOfset);
   void writePixelBuffer_(const uint8_t* data, const uint16_t length, const uint16_t limit, const uint16_t start);
