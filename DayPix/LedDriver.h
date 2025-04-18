@@ -1,12 +1,13 @@
 #include "pins_arduino.h"
+#include <SPI.h>
 #ifndef LED_DRIVER_H
 #define LED_DRIVER_H
 
 #include <Arduino.h>
 // Define macros for different hardware platforms
-#define XIAO_ESP32C3
+//#define XIAO_ESP32C3
 //#define XIAO_ESP32S3
-//#define ESP_ETH01
+#define ESP_ETH01
 
 
 class ledDriver {
@@ -69,7 +70,9 @@ public:
     int latchPin = IO15;
     int dataPin = IO14;
     int clockPin = IO12;
-
+   // #define SPI_SCK 12
+   // #define SPI_MOSI 14
+    //#define SPI_CS 15
     int latchPin2 = IO33;
     int dataPin2 = IO4;
     int clockPin2 = IO2;

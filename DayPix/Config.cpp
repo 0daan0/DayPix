@@ -34,7 +34,7 @@ String HOST_NAME;
 String CURR_IP ="";
 const char* www_username = "admin";
 const char* www_password = "admin";
-String FIRMWARE_VERSION = "1.27";
+String FIRMWARE_VERSION = "2.0";
 float GAMMA_CORRECTION = 1.8;
 const char* APpass = "setupdaypix";
 

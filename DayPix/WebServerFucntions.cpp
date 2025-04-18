@@ -215,103 +215,106 @@ void setupWebServer() {
       }
   });
 
- server.on("/fs", HTTP_GET, [](AsyncWebServerRequest *request) {
-    // Check if the user is logged in
-   loginUser(request);
-        // If not logged in, redirect to login page or send unauthorized response
-  
-  // Extract file name from request URL for deletion
-    String filename;
-    if (request->hasArg("delete")) {
-        filename = request->arg("delete");
-    }
+  server.on("/fs", HTTP_GET, [](AsyncWebServerRequest *request) {
+      // Check if the user is logged in
+    loginUser(request);
+          // If not logged in, redirect to login page or send unauthorized response
+    
+    // Extract file name from request URL for deletion
+      String filename;
+      if (request->hasArg("delete")) {
+          filename = request->arg("delete");
+      }
 
-    // Handle file deletion request
-    if (!filename.isEmpty()) {
-        if (SPIFFS.exists("/"+filename)) {
-             Serial.println("Try to delete"+filename);
-            if (SPIFFS.remove("/"+filename)) {
-                request->send(200, "text/plain", "File deleted successfully");
-            } else {
-                request->send(500, "text/plain", "Failed to delete file");
-            }
-            return;
-        } else {
-            request->send(404, "text/plain", "File not found");
-            return;
-        }
-    }
+      // Handle file deletion request
+      if (!filename.isEmpty()) {
+          if (SPIFFS.exists("/"+filename)) {
+              Serial.println("Try to delete"+filename);
+              if (SPIFFS.remove("/"+filename)) {
+                  request->send(200, "text/plain", "File deleted successfully");
+              } else {
+                  request->send(500, "text/plain", "Failed to delete file");
+              }
+              return;
+          } else {
+              request->send(404, "text/plain", "File not found");
+              return;
+          }
+      }
 
-    // Check if the format button is clicked
-    if (request->hasArg("format")) {
-        // Format the file system
-        if (SPIFFS.format()) {
-            request->send(200, "text/plain", "File system formatted successfully");
-        } else {
-            request->send(500, "text/plain", "Failed to format file system");
-        }
-        return;
-    }
+      // Check if the format button is clicked
+      if (request->hasArg("format")) {
+          // Format the file system
+          if (SPIFFS.format()) {
+              request->send(200, "text/plain", "File system formatted successfully");
+          } else {
+              request->send(500, "text/plain", "Failed to format file system");
+          }
+          return;
+      }
 
-    // Open SPIFFS directory
-    String fileListing;
+      // Open SPIFFS directory
+      String fileListing;
 
-    File root = SPIFFS.open("/");
-    if (!root) {
-        Serial.println("Failed to open directory");
-        request->send(500, "text/plain", "Failed to open directory");
-        return;
-    }
-    // Calculate total, used, and free space in kilobytes
-    size_t totalKB = SPIFFS.totalBytes() / 1024;
-    size_t usedKB = SPIFFS.usedBytes() / 1024;
-    size_t freeKB = totalKB - usedKB;
+      File root = SPIFFS.open("/");
+      if (!root) {
+          Serial.println("Failed to open directory");
+          request->send(500, "text/plain", "Failed to open directory");
+          return;
+      }
+      // Calculate total, used, and free space in kilobytes
+      size_t totalKB = SPIFFS.totalBytes() / 1024;
+      size_t usedKB = SPIFFS.usedBytes() / 1024;
+      size_t freeKB = totalKB - usedKB;
 
-    // Generate file listing
-    fileListing = "";
-    File file = root.openNextFile();
-    while (file) {
-        fileListing += "<a href='/file?filename=" + String(file.name()) + "'>" + String(file.name()) + "</a>";
-        fileListing += " <a href='/fs?delete=" + String(file.name()) + "'>Delete</a><br>";
-        file = root.openNextFile();
-    }
-    root.close();
-  // String css = "<html><head><style>"
-  //                   "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; padding: 10px; }"
-  //                   "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 30px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 36px; }"
-  //                   "form { max-width: 90%; margin: 0 auto; }"
-  //                   "label { display: block; margin-bottom: 30px; font-size: 24px; }"
-  //                   "input[type='range'] { width: 100%; height: 80px; padding: 30px; margin-bottom: 30px; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 2px solid #EFEFE0; border-radius: 20px; -webkit-appearance: none; }"
-  //                   "input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 60px; height: 60px; background: #4CAF50; border-radius: 50%; cursor: pointer; }"
-  //                   "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: #4CAF50; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; }"
-  //                   "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }"
-  //                   "a {color: pink;}"
-  //                   "a:hover {color: white}"
-  //                   "</style></head><body>";
+      // Generate file listing
+      fileListing = "";
+      File file = root.openNextFile();
+      while (file) {
+          fileListing += "<a href='/file?filename=" + String(file.name()) + "'>" + String(file.name()) + "</a>";
+          fileListing += " <a href='/fs?delete=" + String(file.name()) + "'>Delete</a><br>";
+          file = root.openNextFile();
+      }
+      root.close();
+    // String css = "<html><head><style>"
+    //                   "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; padding: 10px; }"
+    //                   "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 30px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 36px; }"
+    //                   "form { max-width: 90%; margin: 0 auto; }"
+    //                   "label { display: block; margin-bottom: 30px; font-size: 24px; }"
+    //                   "input[type='range'] { width: 100%; height: 80px; padding: 30px; margin-bottom: 30px; box-sizing: border-box; background-color: #343541; color: #EFEFE0; border: 2px solid #EFEFE0; border-radius: 20px; -webkit-appearance: none; }"
+    //                   "input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 60px; height: 60px; background: #4CAF50; border-radius: 50%; cursor: pointer; }"
+    //                   "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: #4CAF50; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; }"
+    //                   "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; }"
+    //                   "a {color: pink;}"
+    //                   "a:hover {color: white}"
+    //                   "</style></head><body>";
 
-    // Generate response with file upload form, file listing, and space information in KB
-    String response = "<h2>File Upload</h2>"
-                      "<form method='POST' action='/upload' enctype='multipart/form-data'>"
-                      "<input type='file' name='upload'>"
-                      "<input type='submit' value='Upload'>"
-                      "</form>"
-                      "<h2>Existing Files</h2>"
-                      "<pre>" + fileListing + "</pre>"
-                      "<h2>Free Space</h2>"
-                      "<p>Total KB: " + String(totalKB) + "</p>"
-                      "<p>Used KB: " + String(usedKB) + "</p>"
-                      "<p>Free KB: " + String(freeKB) + "</p>"
-                      "<h2>Format File System</h2>"
-                      "<form method='POST' action='/fs'>"
-                      "<input type='hidden' name='format' value='true'>"
-                      "<input type='submit' value='Format FS'>"
-                      "</form>";
+      // Generate response with file upload form, file listing, and space information in KB
+      String response = "<h2>File Upload</h2>"
+                        "<form method='POST' action='/upload' enctype='multipart/form-data'>"
+                        "<input type='file' name='upload'>"
+                        "<input type='submit' value='Upload'>"
+                        "</form>"
+                        "<h2>Existing Files</h2>"
+                        "<pre>" + fileListing + "</pre>"
+                        "<h2>Free Space</h2>"
+                        "<p>Total KB: " + String(totalKB) + "</p>"
+                        "<p>Used KB: " + String(usedKB) + "</p>"
+                        "<p>Free KB: " + String(freeKB) + "</p>"
+                        "<form method='POST' action='/update' enctype='multipart/form-data'>"
+                        "Firmware Update: <input type='file' name='update'><br><br>"
+                        "<input type='submit' value='Update'>"
+                        "<h2>Format File System</h2>"
+                        "<form method='POST' action='/fs'>"
+                        "<input type='hidden' name='format' value='true'>"
+                        "<input type='submit' value='Format FS'>"
+                        "</form>";
 
-    // Send response to client
-    request->send(200, "text/html", html_header+response);
-    });
+      // Send response to client
+      request->send(200, "text/html", html_header+response);
+      });
 
- // Handle file upload
+  // Handle file upload
   server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {},
   [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     static File uploadFile;
@@ -345,7 +348,7 @@ void setupWebServer() {
   });
 
 
- // Serve static files
+  // Serve static files
   server.serveStatic("/", SPIFFS, "/");
 
   // List .fx files endpoint
@@ -418,8 +421,6 @@ server.on("/applyEffect", HTTP_POST, [](AsyncWebServerRequest *request){
         NULL,                          // Task handle
         1                              // Core to run the task on (0 or 1)
     );
-      //xTaskCreatePinnedToCore(applyLEDEffectFromFile, "LED Effect Task", 2048, (void*)&filenameCopy, 3, NULL, 1);
-      //xTaskCreate(applyLEDEffectFromFile,"LED Effect Task",8192,(void*)&filenameCopy,1,NULL);
     } else {
         request->send(400, "text/plain", "No effect file selected");
     }
@@ -432,24 +433,7 @@ server.on("/ledcontrol", HTTP_GET, [](AsyncWebServerRequest *request){
     // HTML for the LED control page
     String html = "<html><head><style>"
                    "body { font-family: Arial, sans-serif; background-color: #343541; color: #fff; padding: 10px; background-image: url(/file?filename=bg.gif); background-size: cover; }" 
-    //               "h1 { text-align: center; border: 3px solid; max-width: 90%; margin: 0 auto; background-image: linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red); padding: 30px; color: #EFEFE0; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; font-size: 36px; }"
-    //               "form { max-width: 90%; margin: 0 auto; }"
-    //               "label { display: block; margin-bottom: 30px; font-size: 24px; }"
-    //               "input[type='range'] { width: 100%; height: 80px; padding: 30px; margin-bottom: 30px; box-sizing: border-box; background-color: rgba(52, 53, 65, 0.7); color: #EFEFE0; border: 2px solid #EFEFE0; border-radius: 20px; -webkit-appearance: none; }"
-    //               "input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 60px; height: 60px; background: #4CAF50; border-radius: 50%; cursor: pointer; }"
-    //               "input[type='submit'], input[type='button'], select { width: 100%; padding: 40px; margin-top: 30px; background-color: rgba(76, 175, 80, 0.7); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; opacity: 0.7; }"
-    //               "input[type='submit']:hover, input[type='button']:hover, select:hover { background-color: #45a049; opacity: 1; }"
-    //                "input[type='submit'], input[type='button'] { width: 100%; padding: 40px; margin-top: 30px; background-color: rgba(76, 175, 80, 0.7); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 28px; opacity: 0.7; }" // Added opacity to buttons
-    //               "input[type='submit']:hover, input[type='button']:hover { background-color: #45a049; opacity: 1; }" // Adjusted opacity on hover
                    "</style>";
-  // String html = "<!DOCTYPE html><html><head>";
-  // html += "<link rel='stylesheet' type='text/css' href='/style.css'>";
-  // html += "<script>";
-  // html += "function toggleSwitch(element) {";
-  // html += "  element.checked = !element.checked;";
-  // html += "}";
-  // html += "</script>";
-  // html += "</head><body>";
   html += "<script>"
           "let bgToggle = false;"
           "document.addEventListener('click', function () {"
@@ -676,183 +660,167 @@ void handleLedControl(AsyncWebServerRequest* request) {
 }
 
 void handleRoot(AsyncWebServerRequest* request) {
-  //loginUser(request);
+  readEEPROMData();
 
-  // Title header 1
-  String html = "<h1>" + String(H_PRFX) + " Config</h1>";
+  AsyncWebServerResponse* response = request->beginChunkedResponse("text/html",
+    [](uint8_t *buffer, size_t maxLen, size_t alreadySent) -> size_t {
 
-  // Main form for wifi config input
-  html += "<form action='/save' method='post'>";
-  html += "<h3> Device/Network Settings </h3>";
-  html += "Device Name    : <input type='text' name='devicename' value='" + DEV_NAME + "'><br>";
-  html += "WiFi SSID    : <input type='text' name='ssid' value='" + storedSSID + "'><br>";
-  html += "WiFi Password: <input type='password' name='password' value='" + storedPassword + "'><br>";
+      static String html;
+      if (alreadySent == 0) {
+        html = html_header;
+        html += "<!DOCTYPE html><html><head><title>Config</title></head><body>";
+        html += "<h1>" + String(H_PRFX) + " Config</h1>";
 
-  if (led.ethCap) {
-  html += "<input type='checkbox' id='failoverCheckbox' name='b_failover' " + String(b_failover ? "checked" : "") + " onclick='toggleFailover(this)'> <label for='failoverCheckbox'>Ethernet to Wifi Failover</label><br>";
-  html += "<h4>Failover mode will fallback to wifi when Ethernet is disconnected</h4>";
-  }
+        html += "<form action='/save' method='post'>";
+        html += "<h3>Device/Network Settings</h3>";
+        html += "Device Name    : <input type='text' name='devicename' value='" + DEV_NAME + "'><br>";
+        html += "WiFi SSID      : <input type='text' name='ssid' value='" + storedSSID + "'><br>";
+        html += "WiFi Password  : <input type='password' name='password' value='" + storedPassword + "'><br>";
 
-  // IP configuration section
-  html += "<h3>IP Configuration</h3>";
-  html += "<input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + " onclick='toggleDHCP(this)'> Use DHCP<br>";
-  html += "<div id='manualConfig' style='display: " +  String(b_dhcp ? "none" : "block") + ";'>";
-  html += "IP Address: <input type='text' name='ipAddress' value='" + storedIPAddress + "'><br>";
-  html += "Subnet Mask: <input type='text' name='subnetMask' value='" + storedSubnetMask + "'><br>";
-  html += "Gateway: <input type='text' name='gateway' value='" + storedGateway + "'><br>";
-  html += "DNS Server: <input type='text' name='dnsServer' value='" + storedDNSServer + "'><br>";
-  html += "</div>";
+        if (led.ethCap) {
+          html += "<input type='checkbox' id='failoverCheckbox' name='b_failover' " + String(b_failover ? "checked" : "") + " onclick='toggleFailover(this)'> <label for='failoverCheckbox'>Ethernet to Wifi Failover</label><br>";
+          html += "<h4>Failover mode will fallback to wifi when Ethernet is disconnected</h4>";
+        }
 
-html += "<script>";
-html += "document.addEventListener('DOMContentLoaded', function() {";
-html += "  const gammaSlider = document.getElementById('gammaSlider');";
-html += "  const gammaValue = document.getElementById('gammaValue');";
-html += "  gammaSlider.addEventListener('input', updateGamma);";
+        html += "<h3>IP Configuration</h3>";
+        html += "<input type='checkbox' id='dhcpCheckbox' name='b_dhcp' " + String(b_dhcp ? "checked" : "") + " onclick='toggleDHCP(this)'> Use DHCP<br>";
+        html += "<div id='manualConfig' style='display: " + String(b_dhcp ? "none" : "block") + ";'>";
+        html += "IP Address : <input type='text' name='ipAddress' value='" + storedIPAddress + "'><br>";
+        html += "Subnet Mask: <input type='text' name='subnetMask' value='" + storedSubnetMask + "'><br>";
+        html += "Gateway    : <input type='text' name='gateway' value='" + storedGateway + "'><br>";
+        html += "DNS Server : <input type='text' name='dnsServer' value='" + storedDNSServer + "'><br>";
+        html += "</div>";
 
-html += "  function updateGamma() {";
-html += "    const gamma = parseFloat(gammaSlider.value).toFixed(2);"; // Ensuring the gamma value is a float
-html += "    gammaValue.textContent = gamma;"; // Update the displayed value
-html += "    fetch('/gamma', {";
-html += "      method: 'POST',";
-html += "      headers: {";
-html += "        'Content-Type': 'application/x-www-form-urlencoded'";
-html += "      },";
-html += "      body: 'gamma=' + encodeURIComponent(gamma)"; // Correctly formatting the body
-html += "    })";
-html += "    .then(response => {";
-html += "      if (response.ok) {";
-html += "        console.log('Gamma updated successfully');";
-html += "      } else {";
-html += "        console.error('Failed to update gamma');";
-html += "      }";
-html += "    })";
-html += "    .catch(error => {";
-html += "      console.error('Error:', error);";
-html += "    });";
-html += "  }";
+        html += "<input type='checkbox' id='16_bitCheckbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + " onclick='toggle16bit(this)'> 16-bit Mode<br>";
+        html += "<h4>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</h4>";
+        html += "<input type='checkbox' id='silentCheckbox' name='b_silent' " + String(b_silent ? "checked" : "") + " onclick='toggleSilent(this)'> Silent mode<br>";
+        html += "<h4>In silent mode no connection status is given on the LED outputs</h4>";
+        html += "<input type='checkbox' id='reverseCheckbox' name='b_reverseArray' " + String(b_reverseArray ? "checked" : "") + " onclick='toggleReverse(this)'> Reverse DMX addresses<br>";
+        html += "<h4>Normal mode: Lowest address = first LED outwards from the controller</h4>";
+        html += "<h4>Reverse mode: Highest address = first LED outwards from the controller</h4>";
+        html += "<h4>NOTE: Default color space is BGR in reverse order this will be RGB</h4>";
 
-html += "  document.getElementById('dhcpCheckbox').addEventListener('change', function() {";
-html += "    if (this.checked) {";
-html += "      document.getElementById('manualConfig').style.display = 'none';";
-html += "    } else {";
-html += "      document.getElementById('manualConfig').style.display = 'block';";
-html += "    }";
-html += "  });";
-html += "});";
-html += "</script>";
+        html += "<label for='gammaSlider' style='font-size: 1.5rem;'>Gamma:</label><br>";
+        html += "<input type='range' id='gammaSlider' name='gamma' min='0.01' max='5' step='0.01' value='" + String(GAMMA_CORRECTION) + "' oninput='updateGammaValue()'><br>";
+        html += "<span id='gammaValue' style='font-size: 1.5rem;'>" + String(GAMMA_CORRECTION) + "</span><br>";
 
-// feed watchdog 
- rstWdt(); 
-  // Main form for DMX/Artnet config input
-  html += "<body>";
-  html += "<h3> ArtNet/DMX Settings </h3>";
-  html += "Art-Net Universe Start: <select name='universe_start'>";
-  for (int i = 0; i <= 15; ++i) {
-    html += "<option value='" + String(i) + "' " + (storedUniverseStrStart.toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
-  }
-  html += "</select>";
-  html += "Art-Net Universe End: <select name='universe_end'>";
-  for (int i = 0; i <= 15; ++i) {
-    html += "<option value='" + String(i) + "' " + (storedUniverseStrEnd.toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
-  }
-  html += "</select><br>";
+        // --- DMX SETTINGS ---
+        html += "<h3>ArtNet/DMX Settings</h3>";
+        html += "Art-Net Universe Start: <select name='universe_start'>";
+        for (int i = 0; i <= 15; ++i) {
+          html += "<option value='" + String(i) + "'";
+          if (storedUniverseStrStart.toInt() == i) html += " selected";
+          html += ">" + String(i) + "</option>";
+        }
+        html += "</select><br>";
 
-  html += "DMX Start Addr  : <select name='DmxAddr'>";
-  for (int i = 0; i <= 512; ++i) {
-    html += "<option value='" + String(i) + "' " + (storedDMXAddr.toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
-  }
-  html += "</select>";
+        html += "Art-Net Universe End: <select name='universe_end'>";
+        for (int i = 0; i <= 15; ++i) {
+          html += "<option value='" + String(i) + "'";
+          if (storedUniverseStrEnd.toInt() == i) html += " selected";
+          html += ">" + String(i) + "</option>";
+        }
+        html += "</select><br>";
 
-  // Calculate DMX address range
-  int startAddr = storedDMXAddr.toInt();
-  int endAddr;
-  if (b_16Bit) {
-    endAddr = startAddr + (storedNrOfLeds.toInt() * 6 );
-  } else {
-    endAddr = startAddr + (storedNrOfLeds.toInt() * 3 );
-  }
+        html += "DMX Start Addr: <select name='DmxAddr'>";
+        for (int i = 0; i <= 512; ++i) {
+          html += "<option value='" + String(i) + "'";
+          if (storedDMXAddr.toInt() == i) html += " selected";
+          html += ">" + String(i) + "</option>";
+        }
+        html += "</select><br>";
 
-  html += "<br>";
-  html += "Current Address Range: " + String(startAddr+1) + " - " + String(endAddr) + "<br>";
+        int startAddr = storedDMXAddr.toInt();
+        int endAddr = b_16Bit ? startAddr + storedNrOfLeds.toInt() * 6 : startAddr + storedNrOfLeds.toInt() * 3;
+        html += "Current Address Range: " + String(startAddr + 1) + " - " + String(endAddr) + "<br>";
 
-  // Main form for LED config input
-  html += "<h3> Pixel Settings </h3>";
-  html += "Number of Pixels per universe : <select name='NrofLEDS'>";
-  for (int i = 1; i <= 170; ++i) {
-    if (b_16Bit && i > 85) {
-      break;
+        html += "Number of Pixels per universe: <select name='NrofLEDS'>";
+        for (int i = 1; i <= 170; ++i) {
+          if (b_16Bit && i > 85) break;
+          html += "<option value='" + String(i) + "'";
+          if (storedNrOfLeds.toInt() == i) html += " selected";
+          html += ">" + String(i) + "</option>";
+        }
+        html += "</select><br>";
+
+        // Buttons
+        html += "<input type='submit' value='Save' onclick='saveClicked()'>";
+        html += "</form>";
+        html += "<form method='post' action='/identify'><input type='button' value='Identify' onclick='identifyClicked()'></form>";
+        html += "<form method='post'><input type='button' value='LEDControl' onclick='window.location.href=\"/ledcontrol\"'></form>";
+        html += "<form method='post'><input type='button' value='Reboot' onclick='rebootClicked()'></form>";
+
+        // Firmware update
+        html += "<form method='POST' action='/update' enctype='multipart/form-data'>";
+        html += "Firmware Update: <input type='file' name='update'><br><br>";
+        html += "<input type='submit' value='Update'>";
+        html += "</form>";
+        html += "<p>Firmware Version: " + String(FIRMWARE_VERSION) + "</p>";
+        html += "<p>HW Version: " + String(ledDriverInstance.hwVersion) + "</p>";
+        html += "<p><a href='https://www.xentek.nl' target='_blank'>Xentek</a></p>";
+        html += "<a href='/diagnostic'>Diagnostics</a><br>";
+
+        // Script for DHCP & Gamma
+        html += R"rawliteral(
+          <script>
+            (function() {
+              const dhcpCheckbox = document.getElementById('dhcpCheckbox');
+              if (dhcpCheckbox) {
+                dhcpCheckbox.addEventListener('change', function() {
+                  const manualConfig = document.getElementById('manualConfig');
+                  if (manualConfig) {
+                    manualConfig.style.display = this.checked ? 'none' : 'block';
+                  }
+                });
+              }
+
+              document.addEventListener('DOMContentLoaded', function() {
+                const gammaSlider = document.getElementById('gammaSlider');
+                const gammaValue = document.getElementById('gammaValue');
+                if (gammaSlider && gammaValue) {
+                  gammaSlider.addEventListener('input', updateGamma);
+                }
+
+                function updateGamma() {
+                  const gamma = parseFloat(gammaSlider.value).toFixed(2);
+                  gammaValue.textContent = gamma;
+                  fetch('/gamma', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'gamma=' + encodeURIComponent(gamma)
+                  })
+                  .then(response => {
+                    if (!response.ok) console.error('Failed to update gamma');
+                  })
+                  .catch(console.error);
+                }
+              });
+
+              window.identifyClicked = function() {
+                fetch('/identify', { method: 'POST' });
+              };
+              window.rebootClicked = function() {
+                fetch('/reboot', { method: 'POST' });
+              };
+            })();
+          </script>
+        )rawliteral";
+
+        html += "</body></html>";
+      }
+
+      size_t toSend = html.length() - alreadySent;
+      if (toSend > maxLen) toSend = maxLen;
+
+      memcpy(buffer, html.c_str() + alreadySent, toSend);
+      return toSend;
     }
-    html += "<option value='" + String(i) + "' " + (storedNrOfLeds.toInt() == i ? "selected" : "") + ">" + String(i) + "</option>";
-  }
-  html += "<select><br>";
-  html += "<input type='checkbox' id='16_bitCheckbox' name='b_16Bit' " + String(b_16Bit ? "checked" : "") + " onclick='toggle16bit(this)'> 16-bit Mode<br>";
-  html += "<h4>16Bit mode will consume double the DMX channels and limited to 85 LEDS per universe</h4>";
-  html += "<input type='checkbox' id='silentCheckbox' name='b_silent' " + String(b_silent ? "checked" : "") + " onclick='toggleSilent(this)'> Silent mode<br>";
-  html += "<h4>In silent mode no connection status is given on the LED outputs</h4>";
-  html += "<input type='checkbox' id='reverseCheckbox' name='b_reverseArray' " + String(b_reverseArray ? "checked" : "") + " onclick='toggleReverse(this)'> Reverse DMX addresses<br>";
-  html += "<h4>Reverse DMX addresses will address the pixels in reverse order</h4>";
+  );
 
-
-  html += "<h4>Normal mode: Lowest address = first LED outwards from the controller</h4>";
-  html += "<h4>Reverse mode: Highest address = first LED outwards from the controller</h4>";
-  html += "<h4>NOTE: Default color space is BGR in reverse order this will be RGB</h4>";
-
-html += "<label for='gammaSlider' style='font-size: 1.5rem;'>Gamma:</label><br>";
-html += "<input type='range' id='gammaSlider' name='gamma' min='0.01' max='5' step='0.01' value='"+ String(GAMMA_CORRECTION)+"' oninput='updateGammaValue()'><br>";
-html += "<span id='gammaValue' style='font-size: 1.5rem;'>"+ String(GAMMA_CORRECTION)+"</span><br>"; // Initial value
-
- rstWdt(); 
-
-  // Add the Identify button with spacing
-  html += "<form id='saveForm' action='/save' method='post'>";
-  html += "<input type='submit' value='Save' onclick='saveClicked()'>";
-  html += "</form>";
-  html += "<form id='identifyForm' method='post'>";
-  html += "<input type='button' value='Identify' onclick='identifyClicked()'>";
-  html += "</form>";
-
-  // Add led control button
-  html += "<form id='ledControl' method='post'>";
-  html += "<input type='button' value='LEDControl' onclick='window.location.href=\"/ledcontrol\"'>";
-  html += "</form>";
-
-  // Add reboot button
-  html += "<form id='rebootForm' method='post'>";
-  html += "<input type='button' value='Reboot' onclick='rebootClicked()'>";
-  html += "</form>";
-
-  // Updated firmware version display
-  html += "<form method='POST' action='/update' enctype='multipart/form-data'>";
-  html += "Firmware Update: <input type='file' name='update'><br><br>";
-  html += "<input type='submit' value='Update'>";
-  html += "</form>";
-  html += "<p>Firmware Version: " + String(FIRMWARE_VERSION) + "</p>";
-  html += "<p>HW Version: " + String(ledDriverInstance.hwVersion) + "</p>";
-  html += "<p>Xentek</p>";
-  html += "<a href='/diagnostic'>Diagnostics</a><br>";
-
-  // Script for identify button
-  html += "<script>";
-  html += "function identifyClicked() {";
-  html += "var xhttp = new XMLHttpRequest();";
-  html += "xhttp.open('POST', '/identify', true);";
-  html += "xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');";
-  html += "xhttp.send();";
-  html += "}";
-  html += "function rebootClicked() {";
-  html += "var xhttp = new XMLHttpRequest();";
-  html += "xhttp.open('POST', '/reboot', true);";
-  html += "xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');";
-  html += "xhttp.send();";
-  html += "}";
-  html += "</script>";
-  html += "</body></html>";
-  //String response = html_header + html;
-  
-  request->send(200, "text/html",html_header + html);
- 
+  request->send(response);
 }
-
 
 void handleReboot(AsyncWebServerRequest* request) {
   loginUser(request);

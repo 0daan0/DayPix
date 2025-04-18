@@ -2,6 +2,7 @@
 #include "Config.h"
 #include <iostream>
 #include "HwFunctions.h"
+#include <SPI.h>
 
 ledDriver::ledDriver() {
   // Constructor logic, if needed
@@ -13,18 +14,19 @@ ledDriver::ledDriver() {
     NumberOfLeds = nrLeds;
     DmxAddress = DmxAddr;
     pinMode(latchPin, OUTPUT);
-    pinMode(dataPin, OUTPUT);
-    pinMode(clockPin, OUTPUT);
+    //pinMode(dataPin, OUTPUT);
+    //pinMode(clockPin, OUTPUT);
+    SPI.begin(clockPin,dataPin2,dataPin,latchPin);
 
     pinMode(latchPin2, OUTPUT);
-    pinMode(dataPin2, OUTPUT);
+    //pinMode(dataPin2, OUTPUT);
     pinMode(clockPin2, OUTPUT);
 
     blankLEDS(179);
     Serial.print("finish Initialize" + latchPin);
   }
  // Send data to the LED strip
-  void ledDriver::sendData(uint8_t value, int dataPin, int clockPin) {
+ /* void ledDriver::sendData(uint8_t value, int dataPin, int clockPin) {
     float normalizedValue = value / 255.0;
     float correctedValue = pow(normalizedValue, GAMMA_CORRECTION) * 65535;
     int bit = static_cast<int>(correctedValue);
@@ -35,7 +37,24 @@ ledDriver::ledDriver() {
       digitalWrite(clockPin, LOW);
      }
     }
+*/
+void ledDriver::sendData(uint8_t value, int dataPin, int clockPin) {
+    // Step 1: Normalize and apply gamma correction
+    float normalizedValue = value / 255.0;
+    float correctedValue = pow(normalizedValue, GAMMA_CORRECTION) * 65535;
 
+    // Step 2: Convert corrected value to a 16-bit integer
+    uint16_t bit = static_cast<uint16_t>(correctedValue);
+
+    // Step 3: Latch LOW before sending data
+    //digitalWrite(LATCH_PIN, LOW);
+
+    // Step 4: Use SPI to send 16-bit data
+    SPI.transfer16(bit);
+
+    // Step 5: Latch HIGH to store data in the output register
+    //digitalWrite(LATCH_PIN, HIGH);
+}
   void ledDriver::sendDataFast(uint8_t value, int dataPin, int clockPin) {
 
     for (int i = 7; i >= 0; i--) {

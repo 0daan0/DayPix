@@ -26,10 +26,16 @@ ArtnetWiFiReceiver artnet;
 // Global variables to store data and size
 uint8_t* bdata1[512];
 uint8_t* bdata2[512];
+uint8_t* bdata3[512];
+uint8_t* bdata4[512];
 uint16_t bsize1 = 0;
 uint16_t bsize2 = 0;
+uint16_t bsize3 = 0;
+uint16_t bsize4 = 0;
 volatile bool u1rec = false; 
 volatile bool u2rec = false; 
+volatile bool u3rec = false; 
+volatile bool u4rec = false; 
 SemaphoreHandle_t xMutex;
 
 ledDriver led;
@@ -73,30 +79,54 @@ void callback2(const uint8_t* data, const uint16_t size) {
     checkAndWritePixelBuffer();
 }
 
+void callback3(const uint8_t* data, const uint16_t size) {
+  if (recvUniverse.indexOf("U" + String(artnet.universe()) + "U") == -1) {
+        recvUniverse += "U" + String(artnet.universe()) + "U";
+    }
+    xSemaphoreTake(xMutex, portMAX_DELAY); 
+    memcpy(bdata3, data, size);
+    bsize3 = size;
+    u3rec = true;
+    
+    xSemaphoreGive(xMutex);
+    checkAndWritePixelBuffer();
+}
+
+void callback4(const uint8_t* data, const uint16_t size) {
+  if (recvUniverse.indexOf("U" + String(artnet.universe()) + "U") == -1) {
+        recvUniverse += "U" + String(artnet.universe()) + "U";
+    }
+    xSemaphoreTake(xMutex, portMAX_DELAY); 
+    memcpy(bdata4, data, size);
+    bsize4 = size;
+    u4rec = true;
+    
+    xSemaphoreGive(xMutex);
+    checkAndWritePixelBuffer();
+}
+
 void checkAndWritePixelBuffer() {
     xSemaphoreTake(xMutex, portMAX_DELAY);
     
-    if (u1rec && u2rec) {
+    if (u1rec && u2rec && u3rec && u4rec) {
         // Combine data from both callbacks by attaching them back-to-front
-        uint8_t combinedData[bsize1 + bsize2];
+        uint8_t combinedData[bsize1 + bsize2 + bsize3 + bsize4];
         memcpy(combinedData, bdata1, bsize1);
         memcpy(combinedData + bsize1, bdata2, bsize2);
-        
-        led.writePixelBuffer(combinedData, bsize1 + bsize2, NrOfLeds * 2, DmxAddr, 0, true);
+        memcpy(combinedData + bsize1 + bsize2, bdata3, bsize3);
+        memcpy(combinedData + bsize1 + bsize2 + bsize3, bdata4, bsize4);
+
+        led.writePixelBuffer(combinedData, bsize1 + bsize2 + bsize3 + bsize4, NrOfLeds * 4, DmxAddr, 0, true);
         // Reset flags
         u1rec = false;
         u2rec = false;
+        u3rec = false;
+        u4rec = false;
     }
     
     xSemaphoreGive(xMutex);
 }
 
-void callback3(const uint8_t* data, const uint16_t size) {
-  if (recvUniverse.indexOf(String(artnet.universe())) == -1) {
-      recvUniverse += "U" + String(artnet.universe()) + "U";
-  }
-  led.writePixelBufferPort2(data, size, NrOfLeds, DmxAddr, 0);
-}
 
 // Task to get Artnet data frame and write to pixel buffer
 void artnetTask(void* parameter) {
@@ -355,7 +385,7 @@ if (longPressDetected) {
   } else {
     DEV_NAME = storedDeviceName;
   }
-  HOST_NAME = H_PRFX + "-" + DEV_NAME;
+  HOST_NAME = H_PRFX + "-" + DEV_NAME;;
   ArduinoOTA.setHostname(HOST_NAME.c_str());
   WiFi.setHostname(HOST_NAME.c_str());
   delay(100);
@@ -499,6 +529,16 @@ if (longPressDetected) {
   if (storedUniverseStart + 1 <= storedUniverseEnd) {
       artnet.subscribe(storedUniverseStart + 1, callback2);
       Serial.println("Add universe listener for " + String(storedUniverseStart + 1) + " for callback2");
+  }
+   // Subscribe callback3 to the third universe
+  if (storedUniverseStart + 2 <= storedUniverseEnd) {
+      artnet.subscribe(storedUniverseStart + 2, callback3);
+      Serial.println("Add universe listener for " + String(storedUniverseStart + 1) + " for callback3");
+  }
+   // Subscribe callback4 to the third universe
+  if (storedUniverseStart + 3 <= storedUniverseEnd) {
+      artnet.subscribe(storedUniverseStart + 3, callback4);
+      Serial.println("Add universe listener for " + String(storedUniverseStart + 1) + " for callback4");
   }
 
   // Subscribe callback2 to the fourth universe

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DayPix Config</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1, h3, h4 { color: #333; }
+        input, select { margin: 5px; padding: 5px; }
+        form { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <!-- Title -->
+    <h1>%H_PRFX% Config</h1>
+
+    <!-- Device/Network Settings -->
+    <form action="/save" method="post">
+        <h3>Device/Network Settings</h3>
+        Device Name: <input type="text" name="devicename" value="%DEV_NAME%"><br>
+        WiFi SSID: <input type="text" name="ssid" value="%SSID%"><br>
+        WiFi Password: <input type="password" name="password" value="%PASSWORD%"><br>
+
+        <input type="checkbox" id="failoverCheckbox" name="b_failover" %B_FAILOVER%> 
+        <label for="failoverCheckbox">Ethernet to WiFi Failover</label><br>
+        <h4>Failover mode will fallback to WiFi when Ethernet is disconnected.</h4>
+
+        <!-- IP Configuration -->
+        <h3>IP Configuration</h3>
+        <input type="checkbox" id="dhcpCheckbox" name="b_dhcp" %B_DHCP%> Use DHCP<br>
+        <div id="manualConfig" style="display: %DHCP_STYLE%;">
+            IP Address: <input type="text" name="ipAddress" value="%IP_ADDRESS%"><br>
+            Subnet Mask: <input type="text" name="subnetMask" value="%SUBNET_MASK%"><br>
+            Gateway: <input type="text" name="gateway" value="%GATEWAY%"><br>
+            DNS Server: <input type="text" name="dnsServer" value="%DNS_SERVER%"><br>
+        </div>
+    </form>
+
+    <!-- Gamma Slider -->
+    <label for="gammaSlider">Gamma:</label><br>
+    <input type="range" id="gammaSlider" name="gamma" min="0.01" max="5" step="0.01" value="%GAMMA_CORRECTION%">
+    <span id="gammaValue">%GAMMA_CORRECTION%</span><br>
+
+    <!-- ArtNet/DMX Settings -->
+    <h3>ArtNet/DMX Settings</h3>
+    Art-Net Universe Start:
+    <select name="universe_start">
+        %UNIVERSE_START_OPTIONS%
+    </select>
+    Art-Net Universe End:
+    <select name="universe_end">
+        %UNIVERSE_END_OPTIONS%
+    </select><br>
+
+    DMX Start Address:
+    <select name="DmxAddr">
+        %DMX_ADDR_OPTIONS%
+    </select><br>
+
+    Current Address Range: %ADDR_RANGE%<br>
+
+    <!-- Pixel Settings -->
+    <h3>Pixel Settings</h3>
+    Number of Pixels per Universe:
+    <select name="NrofLEDS">
+        %NUM_PIXELS_OPTIONS%
+    </select><br>
+
+    <input type="checkbox" id="16_bitCheckbox" name="b_16Bit" %B_16BIT%> 16-bit Mode<br>
+    <h4>16-bit mode consumes double the DMX channels.</h4>
+
+    <!-- Buttons -->
+    <form action="/save" method="post"><input type="submit" value="Save"></form>
+    <form><input type="button" value="Identify" onclick="identifyClicked()"></form>
+    <form><input type="button" value="Reboot" onclick="rebootClicked()"></form>
+
+    <!-- Firmware Update -->
+    <form method="POST" action="/update" enctype="multipart/form-data">
+        Firmware Update: <input type="file" name="update"><br>
+        <input type="submit" value="Update">
+    </form>
+    <p>Firmware Version: %FIRMWARE_VERSION%</p>
+    <p>HW Version: %HW_VERSION%</p>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dhcpCheckbox = document.getElementById('dhcpCheckbox');
+            const manualConfig = document.getElementById('manualConfig');
+
+            dhcpCheckbox.addEventListener('change', function() {
+                manualConfig.style.display = this.checked ? 'none' : 'block';
+            });
+
+            const gammaSlider = document.getElementById('gammaSlider');
+            const gammaValue = document.getElementById('gammaValue');
+
+            gammaSlider.addEventListener('input', function() {
+                gammaValue.textContent = parseFloat(this.value).toFixed(2);
+                fetch('/gamma', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'gamma=' + encodeURIComponent(this.value)
+                });
+            });
+        });
+
+        function identifyClicked() {
+            fetch('/identify', { method: 'POST' });
+        }
+
+        function rebootClicked() {
+            fetch('/reboot', { method: 'POST' });
+        }
+    </script>
+</body>
+</html>

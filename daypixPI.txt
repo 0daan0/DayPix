@@ -1,0 +1,98 @@
+import spidev
+import threading
+import time
+import wiringpi as GPIO
+import sys
+from python_artnet import python_artnet as Artnet
+import logging
+
+# Logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger()
+
+# SPI and GPIO Setup
+GPIO.wiringPiSetupGpio()
+spi0 = spidev.SpiDev()
+spi1 = spidev.SpiDev()
+spi0.open(0, 0)
+spi1.open(1, 0)
+spi0.max_speed_hz = 3200000
+spi1.max_speed_hz = 3200000
+spi0.mode = spi1.mode = 0b00
+
+latchPin1, latchPin2 = 26, 27
+GPIO.pinMode(latchPin1, GPIO.OUTPUT)
+GPIO.pinMode(latchPin2, GPIO.OUTPUT)
+
+# Flags and Locks
+buffer_lock = threading.Lock()
+b1rec = b2rec = False
+
+# Art-Net Config
+artnetUniverse1, artnetUniverse2 = 2, 3
+artNet = Artnet.Artnet("0.0.0.0", 6454, "192.168.2.106", SHORTNAME="DayPix PI", DEBUG=False)
+
+# Functions
+def sendData(spi, value):
+    try:
+        norm = value / 255.0
+        corrected = int((norm ** 1.75) * 65535)
+        spi.xfer2([(corrected >> 8) & 0xFF, corrected & 0xFF])
+    except Exception as e:
+        logger.error(f"SPI transfer failed: {e}")
+
+def writePixelbuffer(buffer, spi):
+    for value in buffer:
+        sendData(spi, value)
+
+def latch_frame():
+    GPIO.digitalWrite(latchPin1, GPIO.HIGH)
+    GPIO.digitalWrite(latchPin2, GPIO.HIGH)
+    time.sleep(0.00001)
+    GPIO.digitalWrite(latchPin1, GPIO.LOW)
+    GPIO.digitalWrite(latchPin2, GPIO.LOW)
+
+def universe_callback1(data):
+    global b1rec
+    with buffer_lock:
+        if not b1rec:
+            writePixelbuffer(data, spi0)
+            b1rec = True
+
+def universe_callback2(data):
+    global b2rec
+    with buffer_lock:
+        if not b2rec:
+            writePixelbuffer(data, spi1)
+            b2rec = True
+
+def sync_callback():
+    global b1rec, b2rec
+    with buffer_lock:
+        if b1rec and b2rec:
+            latch_frame()
+            b1rec = b2rec = False
+
+# Main Loop
+try:
+    while True:
+        artNetBuffer = artNet.readBuffer()
+        if artNetBuffer:
+            for packet in artNetBuffer:
+                if packet.universe == artnetUniverse1:
+                    universe_callback1(packet.data)
+                elif packet.universe == artnetUniverse2:
+                    universe_callback2(packet.data)
+                elif packet.opCode == 0x5200:
+                    sync_callback()
+
+        time.sleep(0.001)  # Adjust delay as needed
+except KeyboardInterrupt:
+    pass
+finally:
+    artNet.close()
+    spi0.close()
+    spi1.close()
+    GPIO.digitalWrite(latchPin1, GPIO.LOW)
+    GPIO.digitalWrite(latchPin2, GPIO.LOW)
+    logger.info("Resources released. Goodbye!")
